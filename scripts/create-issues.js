@@ -7,9 +7,33 @@
  * 1. Install GitHub CLI: brew install gh
  * 2. Authenticate: gh auth login
  * 3. Run: node scripts/create-issues.js
+ * 
+ * Optional: Link to project board
+ * Run with --project flag: node scripts/create-issues.js --project
  */
 
 const { execSync } = require('child_process');
+
+// Check if we should link to project
+const linkToProject = process.argv.includes('--project');
+let projectNumber = null;
+
+if (linkToProject) {
+  try {
+    // Try to get the project number
+    const projectList = execSync('gh project list --owner @me --format json', { encoding: 'utf8' });
+    const projects = JSON.parse(projectList);
+    const lazyLearnerProject = projects.projects?.find(p => p.title === 'LazyLearner MVP Development');
+    
+    if (lazyLearnerProject) {
+      projectNumber = lazyLearnerProject.number;
+      console.log(`📊 Found project "LazyLearner MVP Development" (#${projectNumber})`);
+      console.log('   Issues will be automatically added to the project board.\n');
+    }
+  } catch (error) {
+    console.log('⚠️  Could not find project board. Issues will be created without project link.\n');
+  }
+}
 
 const issues = [
   // Sprint 1-2: Authentication
@@ -314,7 +338,15 @@ console.log('🚀 Creating GitHub issues for LazyLearner MVP Phase 1...\n');
 
 issues.forEach((issue, index) => {
   try {
-    const command = `gh issue create --title "${issue.title}" --body "${issue.body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}" --label "${issue.labels}"${issue.milestone ? ` --milestone ${issue.milestone}` : ''}`;
+    let command = `gh issue create --title "${issue.title}" --body "${issue.body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}" --label "${issue.labels}"`;
+    
+    if (issue.milestone) {
+      command += ` --milestone ${issue.milestone}`;
+    }
+    
+    if (projectNumber) {
+      command += ` --project ${projectNumber}`;
+    }
     
     console.log(`Creating issue ${index + 1}/${issues.length}: ${issue.title}`);
     execSync(command, { stdio: 'inherit' });
