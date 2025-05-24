@@ -1,0 +1,56 @@
+name: Project Automation
+
+on:
+  issues:
+    types: [opened, assigned, closed]
+  pull_request:
+    types: [opened, closed, ready_for_review, converted_to_draft]
+
+env:
+  PROJECT_NUMBER: 1  # Update with your actual project number
+
+jobs:
+  add-to-project:
+    name: Add to project
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'opened'
+    steps:
+      - uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: https://github.com/users/${{ github.repository_owner }}/projects/${{ env.PROJECT_NUMBER }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  move-to-ready:
+    name: Move to Ready
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'assigned'
+    steps:
+      - uses: alex-page/github-project-automation-plus@v0.8.3
+        with:
+          project: LazyLearner MVP Development
+          column: Ready
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+  move-to-in-review:
+    name: Move to In Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'ready_for_review')
+    steps:
+      - uses: alex-page/github-project-automation-plus@v0.8.3
+        with:
+          project: LazyLearner MVP Development
+          column: In Review
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+  move-to-done:
+    name: Move to Done
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'issues' && github.event.action == 'closed') ||
+      (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged)
+    steps:
+      - uses: alex-page/github-project-automation-plus@v0.8.3
+        with:
+          project: LazyLearner MVP Development
+          column: Done
+          repo-token: ${{ secrets.GITHUB_TOKEN }}

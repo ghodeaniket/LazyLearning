@@ -1,0 +1,127 @@
+# GitHub Project V2 Configuration
+# This file documents the project setup for reference
+
+name: LazyLearner MVP Development
+description: Tracking Phase 1 implementation of LazyLearner scaling game
+
+# Columns (Status Field)
+columns:
+  - name: 📋 Backlog
+    description: All planned work
+  - name: 🎯 Sprint Planning
+    description: Next sprint items
+  - name: 🚀 Ready
+    description: Ready to start
+  - name: 💻 In Progress
+    description: Currently working
+  - name: 🔍 In Review
+    description: PR opened
+  - name: ✅ Done
+    description: Completed & merged
+
+# Custom Fields
+fields:
+  - name: Phase
+    type: single_select
+    options:
+      - Phase 1
+      - Phase 2
+  
+  - name: Sprint
+    type: single_select
+    options:
+      - Sprint 0
+      - Sprint 1-2
+      - Sprint 3-4
+      - Sprint 5-6
+      - Sprint 7-8
+      - Sprint 9-10
+      - Sprint 11-12
+  
+  - name: Effort
+    type: single_select
+    options:
+      - XS (< 2 hours)
+      - S (2-4 hours)
+      - M (4-8 hours)
+      - L (1-2 days)
+      - XL (> 2 days)
+  
+  - name: Priority
+    type: single_select
+    options:
+      - 🔴 High
+      - 🟡 Medium
+      - 🟢 Low
+  
+  - name: Type
+    type: single_select
+    options:
+      - ✨ Feature
+      - 🐛 Bug
+      - 🧪 Test
+      - 🔧 Chore
+      - 📚 Docs
+
+# Views
+views:
+  - name: Current Sprint
+    type: board
+    filter: "sprint:current"
+    
+  - name: Phase 1 MVP
+    type: board
+    filter: "phase:Phase 1"
+    
+  - name: High Priority
+    type: board
+    filter: "priority:High"
+    
+  - name: Test Tasks
+    type: table
+    filter: "type:Test"
+    
+  - name: Roadmap
+    type: roadmap
+    group_by: sprint
+
+# Workflows (Automation)
+workflows:
+  - name: Auto-add to project
+    trigger: issues.opened
+    action: add_to_project
+    
+  - name: Move to Ready when assigned
+    trigger: issues.assigned
+    action: set_field
+    field: Status
+    value: Ready
+    
+  - name: Move to In Review when PR opened
+    trigger: pull_request.opened
+    action: set_field
+    field: Status
+    value: In Review
+    
+  - name: Move to Done when closed
+    trigger: 
+      - issues.closed
+      - pull_request.merged
+    action: set_field
+    field: Status
+    value: Done
+
+# Insights Configuration
+insights:
+  - type: velocity
+    group_by: sprint
+    
+  - type: burndown
+    scope: sprint
+    
+  - type: distribution
+    field: effort
+    
+  - type: cycle_time
+    from: Ready
+    to: Done
