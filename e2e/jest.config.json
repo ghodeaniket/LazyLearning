@@ -1,0 +1,10 @@
+{
+  "maxWorkers": 1,
+  "testTimeout": 120000,
+  "rootDir": "..",
+  "testMatch": ["<rootDir>/e2e/**/*.e2e.{js,ts}"],
+  "testEnvironment": "./e2e/environment",
+  "reporters": ["detox/runners/jest/reporter"],
+  "globalSetup": "detox/runners/jest/globalSetup",
+  "globalTeardown": "detox/runners/jest/globalTeardown"
+}
