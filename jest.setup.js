@@ -1,6 +1,6 @@
 /* eslint-env jest */
 // Jest setup file
-import '@testing-library/jest-native/extend-expect';
+// Note: @testing-library/jest-native is deprecated. Matchers are now built-in with @testing-library/react-native v12.4+
 
 // Mock React Native modules that aren't transformed in tests
 jest.mock('react-native-reanimated', () => {
