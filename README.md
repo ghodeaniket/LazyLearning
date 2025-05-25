@@ -48,6 +48,8 @@ View our [Project Board](https://github.com/ghodeaniket/LazyLearning/projects/1)
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Project Setup](PROJECT_SETUP.md)
 - [Implementation Plan](https://github.com/ghodeaniket/LazyLearning/blob/main/lazy-learner-implementation-plan-v2.md)
+- [Feature Flags Guide](docs/FEATURE_FLAGS.md) - Complete guide to using feature flags
+- [Feature Flags Quick Reference](docs/FEATURE_FLAGS_QUICK_REFERENCE.md) - Quick reference for developers
 
 ### 🤝 Contributing
 We follow GitHub Flow and conventional commits. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
