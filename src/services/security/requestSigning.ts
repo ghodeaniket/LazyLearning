@@ -80,7 +80,7 @@ export class RequestSigningService {
       data.url,
       data.timestamp,
       data.nonce,
-      data.body ? CryptoJS.MD5(data.body).toString() : '',
+      data.body ? CryptoJS.SHA256(data.body).toString() : '', // Use SHA256 instead of MD5
     ].join('\n');
 
     // Generate HMAC signature
@@ -111,7 +111,8 @@ export class RequestSigningService {
 
     // Regenerate signature and compare
     const expectedSignature = this.generateSignature(options);
-    return signature === expectedSignature;
+    // Use constant-time comparison to prevent timing attacks
+    return this.constantTimeCompare(signature, expectedSignature);
   }
 
   getSigningHeaders(signatureData: {
@@ -125,6 +126,20 @@ export class RequestSigningService {
       'X-Nonce': signatureData.nonce,
       'X-Client-Id': Config.CLIENT_ID || 'lazylearner-app',
     };
+  }
+
+  // Constant-time string comparison to prevent timing attacks
+  private constantTimeCompare(a: string, b: string): boolean {
+    if (a.length !== b.length) {
+      return false;
+    }
+
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+      result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    }
+
+    return result === 0;
   }
 }
 

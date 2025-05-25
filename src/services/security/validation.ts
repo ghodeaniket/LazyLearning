@@ -242,9 +242,11 @@ export class ValidationService {
       .replace(/'/g, '&#039;');
   }
 
-  // SQL injection prevention (for dynamic queries)
-  escapeSql(unsafe: string): string {
-    return unsafe.replace(/['"\\]/g, '\\$&');
+  // SQL injection prevention - WARNING: Always use parameterized queries instead
+  // This method is provided only for legacy compatibility
+  // DO NOT use for new code - use parameterized queries/prepared statements
+  escapeSql(_unsafe: string): string {
+    throw new Error('SQL escape is deprecated. Use parameterized queries instead.');
   }
 
   // Validate file upload

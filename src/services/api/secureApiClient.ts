@@ -39,6 +39,15 @@ export class SecureApiClient {
       const baseSecurityHeaders = securityHeaders.getSecurityHeaders();
       const deviceHeaders = await deviceFingerprint.getFingerprintHeaders();
 
+      // Add CSRF token for state-changing requests
+      const csrfHeaders: Record<string, string> = {};
+      if (config.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(config.method)) {
+        const csrfToken = await sessionManager.getCsrfToken();
+        if (csrfToken) {
+          csrfHeaders['X-CSRF-Token'] = csrfToken;
+        }
+      }
+
       // Prepare request data
       let body = config.body;
 
@@ -72,6 +81,7 @@ export class SecureApiClient {
       const headers = {
         ...baseSecurityHeaders,
         ...deviceHeaders,
+        ...csrfHeaders,
         ...signatureHeaders,
         ...(config.headers as Record<string, string>),
       };

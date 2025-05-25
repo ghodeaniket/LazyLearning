@@ -13,7 +13,7 @@ export class EncryptionService {
   private static instance: EncryptionService;
   private readonly ENCRYPTION_KEY_NAME = 'transport_encryption_key';
   private encryptionKey?: string;
-  private readonly keyDerivationIterations = 10000;
+  private readonly keyDerivationIterations = 100000; // OWASP recommended minimum
 
   private constructor() {}
 
@@ -39,7 +39,10 @@ export class EncryptionService {
   }
 
   private generateKey(): string {
-    return CryptoJS.lib.WordArray.random(256 / 8).toString();
+    // Use cryptographically secure random generation
+    // React Native doesn't have Web Crypto API, use CryptoJS secure random
+    const wordArray = CryptoJS.lib.WordArray.random(256 / 8);
+    return CryptoJS.enc.Base64.stringify(wordArray);
   }
 
   async encryptRequest(data: any): Promise<string> {
@@ -202,7 +205,7 @@ export class EncryptionService {
     const actualSalt = salt || CryptoJS.lib.WordArray.random(128 / 8).toString();
     const hash = CryptoJS.PBKDF2(data, actualSalt, {
       keySize: 256 / 32,
-      iterations: 1000,
+      iterations: 100000, // OWASP recommended minimum
     }).toString();
 
     return `${actualSalt}:${hash}`;
@@ -215,10 +218,25 @@ export class EncryptionService {
 
     const computedHash = CryptoJS.PBKDF2(data, salt, {
       keySize: 256 / 32,
-      iterations: 1000,
+      iterations: 100000, // OWASP recommended minimum
     }).toString();
 
-    return hash === computedHash;
+    // Use constant-time comparison to prevent timing attacks
+    return this.constantTimeCompare(hash, computedHash);
+  }
+
+  // Constant-time string comparison to prevent timing attacks
+  private constantTimeCompare(a: string, b: string): boolean {
+    if (a.length !== b.length) {
+      return false;
+    }
+
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+      result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    }
+
+    return result === 0;
   }
 }
 

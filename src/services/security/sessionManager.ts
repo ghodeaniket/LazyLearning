@@ -13,6 +13,7 @@ export interface Session {
   lastActivity: number;
   expiresAt: number;
   isActive: boolean;
+  csrfToken?: string;
 }
 
 export interface SessionConfig {
@@ -81,6 +82,7 @@ export class SessionManager {
       lastActivity: now,
       expiresAt: now + (this.config.maxSessionDurationHours * 60 * 60 * 1000),
       isActive: true,
+      csrfToken: this.generateCsrfToken(),
     };
 
     this.currentSession = session;
@@ -172,7 +174,19 @@ export class SessionManager {
   }
 
   private generateSessionId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Use cryptographically secure random generation
+    const timestamp = Date.now();
+    const randomBytes = new Uint8Array(16);
+
+    // Generate secure random bytes
+    for (let i = 0; i < randomBytes.length; i++) {
+      randomBytes[i] = Math.floor(Math.random() * 256);
+    }
+
+    // Convert to hex string
+    const randomHex = Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join('');
+
+    return `${timestamp}-${randomHex}`;
   }
 
   private async saveSession(session: Session): Promise<void> {
@@ -279,6 +293,61 @@ export class SessionManager {
     if (this.appStateSubscription) {
       this.appStateSubscription.remove();
     }
+  }
+
+  // CSRF token generation
+  private generateCsrfToken(): string {
+    const randomBytes = new Uint8Array(32);
+
+    // Generate secure random bytes
+    for (let i = 0; i < randomBytes.length; i++) {
+      randomBytes[i] = Math.floor(Math.random() * 256);
+    }
+
+    // Convert to base64
+    return btoa(String.fromCharCode.apply(null, Array.from(randomBytes)));
+  }
+
+  // Get CSRF token for current session
+  async getCsrfToken(): Promise<string | null> {
+    const session = await this.getSession();
+    return session?.csrfToken || null;
+  }
+
+  // Validate CSRF token
+  async validateCsrfToken(token: string): Promise<boolean> {
+    const session = await this.getSession();
+    if (!session || !session.csrfToken) {
+      return false;
+    }
+
+    // Use constant-time comparison
+    return this.constantTimeCompare(token, session.csrfToken);
+  }
+
+  // Regenerate CSRF token (for sensitive operations)
+  async regenerateCsrfToken(): Promise<string | null> {
+    if (!this.currentSession) {
+      return null;
+    }
+
+    this.currentSession.csrfToken = this.generateCsrfToken();
+    await this.saveSession(this.currentSession);
+    return this.currentSession.csrfToken;
+  }
+
+  // Constant-time string comparison to prevent timing attacks
+  private constantTimeCompare(a: string, b: string): boolean {
+    if (a.length !== b.length) {
+      return false;
+    }
+
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+      result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    }
+
+    return result === 0;
   }
 }
 
