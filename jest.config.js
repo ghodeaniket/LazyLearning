@@ -38,6 +38,6 @@ module.exports = {
   },
   testEnvironment: 'node',
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|@react-navigation|react-native-.*|@react-native-.*)/)',
+    'node_modules/(?!(react-native|@react-native|@react-navigation|react-native-.*|@react-native-.*|@sentry|@react-native-firebase|@react-native-community|@tanstack)/)',
   ],
 };

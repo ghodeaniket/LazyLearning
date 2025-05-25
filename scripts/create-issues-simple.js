@@ -1,53 +1,24 @@
 #!/usr/bin/env node
 
 /**
- * Script to create GitHub issues for LazyLearner MVP Phase 1
- *
- * Usage:
- * 1. Install GitHub CLI: brew install gh
- * 2. Authenticate: gh auth login
- * 3. Run: node scripts/create-issues.js
- *
- * Optional: Link to project board
- * Run with --project flag: node scripts/create-issues.js --project
+ * Simple script to create GitHub issues without project linking
+ * Use this if the main script has issues with project linking
  */
 
 const { execSync } = require('child_process');
 
-// Check if we should link to project
-const linkToProject = process.argv.includes('--project');
-let projectNumber = null;
+console.log('🚀 Creating GitHub issues for LazyLearner MVP Phase 1...\n');
+console.log('ℹ️  Note: Issues will be created without project board linking.');
+console.log('   You can manually add them to the project board later.\n');
 
-if (linkToProject) {
-  try {
-    // Try to get the project URL using gh project list
-    const projectOutput = execSync('gh project list --owner @me --limit 100', { encoding: 'utf8' });
-    const lines = projectOutput.split('\n');
-    let projectUrl = null;
-
-    for (const line of lines) {
-      if (line.includes('LazyLearner MVP Development')) {
-        // Extract the URL from the line
-        const match = line.match(/https:\/\/github\.com\/users\/[^\/]+\/projects\/\d+/);
-        if (match) {
-          projectUrl = match[0];
-          break;
-        }
-      }
-    }
-
-    if (projectUrl) {
-      console.log('📊 Found project "LazyLearner MVP Development"');
-      console.log(`   URL: ${projectUrl}`);
-      console.log('   Issues will be automatically added to the project board.\n');
-      projectNumber = projectUrl; // Use the full URL instead of just the number
-    } else {
-      console.log('⚠️  Could not find project board. Issues will be created without project link.\n');
-    }
-  } catch (error) {
-    console.log('⚠️  Error finding project board:', error.message);
-    console.log('   Issues will be created without project link.\n');
-  }
+// First, let's check if milestones exist
+try {
+  console.log('📋 Checking milestones...');
+  execSync('gh api repos/:owner/:repo/milestones', { stdio: 'inherit' });
+  console.log('✅ Milestones found\n');
+} catch (error) {
+  console.log('⚠️  No milestones found. Run setup-github-project.sh first!\n');
+  process.exit(1);
 }
 
 const issues = [
@@ -74,7 +45,7 @@ Target 90% coverage for auth flow
 - Offline login capability
 - Session management`,
     labels: 'test,auth,high-priority',
-    milestone: 2,
+    milestone: 'Phase 1 - Sprint 1-2',
   },
   {
     title: '[FEATURE] Email/password authentication',
@@ -98,7 +69,7 @@ As a user, I want to sign up and log in with my email and password so that I can
 - Store auth tokens securely
 - Follow React Native best practices for forms`,
     labels: 'feature,auth,high-priority',
-    milestone: 2,
+    milestone: 'Phase 1 - Sprint 1-2',
   },
   {
     title: '[FEATURE] Offline login capability',
@@ -120,7 +91,7 @@ As a user, I want to access the app even when offline so that I can continue lea
 - Implement offline session validation
 - Handle sync conflicts gracefully`,
     labels: 'feature,auth,medium-priority',
-    milestone: 2,
+    milestone: 'Phase 1 - Sprint 1-2',
   },
   {
     title: '[FEATURE] Basic user profile',
@@ -143,7 +114,7 @@ As a user, I want to view and edit my profile information so that I can personal
 - Implement form validation
 - Store preferences locally`,
     labels: 'feature,auth,medium-priority',
-    milestone: 2,
+    milestone: 'Phase 1 - Sprint 1-2',
   },
 
   // Sprint 3-4: Game
@@ -168,7 +139,7 @@ Target 100% coverage for game logic
 - gameUtils.ts (already created)
 - Game state management (to be implemented)`,
     labels: 'test,game,high-priority',
-    milestone: 3,
+    milestone: 'Phase 1 - Sprint 3-4',
   },
   {
     title: '[FEATURE] Drag-and-drop pizza mechanics',
@@ -192,7 +163,7 @@ As a player, I want to drag pizzas to servers intuitively so that the game feels
 - Handle multi-touch scenarios
 - Accessibility considerations`,
     labels: 'feature,game,high-priority',
-    milestone: 3,
+    milestone: 'Phase 1 - Sprint 3-4',
   },
   {
     title: '[FEATURE] Game scoring system',
@@ -216,7 +187,7 @@ As a player, I want to see my score and track my progress so that I feel motivat
 - Implement score animations
 - Create ScoreDisplay component`,
     labels: 'feature,game,high-priority',
-    milestone: 3,
+    milestone: 'Phase 1 - Sprint 3-4',
   },
   {
     title: '[FEATURE] Three difficulty levels',
@@ -240,7 +211,7 @@ As a player, I want to choose difficulty levels so that I can play at my skill l
 - Store preferred difficulty
 - Implement gradual difficulty increase`,
     labels: 'feature,game,medium-priority',
-    milestone: 3,
+    milestone: 'Phase 1 - Sprint 3-4',
   },
 
   // Sprint 5-6: Learning
@@ -265,7 +236,7 @@ Target 85% coverage for content system
 - Integration tests for offline sync
 - E2E tests for learning flow`,
     labels: 'test,learning,high-priority',
-    milestone: 4,
+    milestone: 'Phase 1 - Sprint 5-6',
   },
   {
     title: '[FEATURE] Core learning modules',
@@ -297,7 +268,7 @@ As a learner, I want to access structured content about scaling concepts so that
 - [ ] Progress indicators
 - [ ] Offline availability`,
     labels: 'feature,learning,high-priority',
-    milestone: 4,
+    milestone: 'Phase 1 - Sprint 5-6',
   },
   {
     title: '[FEATURE] Progress tracking',
@@ -321,7 +292,7 @@ As a learner, I want to see my learning progress so that I know what I've comple
 - Create ProgressTracker component
 - Implement streak calculation logic`,
     labels: 'feature,learning,high-priority',
-    milestone: 4,
+    milestone: 'Phase 1 - Sprint 5-6',
   },
   {
     title: '[FEATURE] Simple quiz system',
@@ -345,34 +316,38 @@ As a learner, I want to test my knowledge after lessons so that I can verify my 
 - Track quiz scores
 - Implement question randomization`,
     labels: 'feature,learning,medium-priority',
-    milestone: 4,
+    milestone: 'Phase 1 - Sprint 5-6',
   },
 ];
 
-console.log('🚀 Creating GitHub issues for LazyLearner MVP Phase 1...\n');
+let successCount = 0;
+let failCount = 0;
 
 issues.forEach((issue, index) => {
   try {
-    let command = `gh issue create --title "${issue.title}" --body "${issue.body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}" --label "${issue.labels}"`;
-
-    if (issue.milestone) {
-      command += ` --milestone ${issue.milestone}`;
-    }
-
-    if (projectNumber) {
-      command += ` --project ${projectNumber}`;
-    }
+    const command = `gh issue create --title "${issue.title}" --body "${issue.body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}" --label "${issue.labels}" --milestone "${issue.milestone}"`;
 
     console.log(`Creating issue ${index + 1}/${issues.length}: ${issue.title}`);
     execSync(command, { stdio: 'inherit' });
     console.log('✅ Created successfully\n');
+    successCount++;
 
     // Add a small delay to avoid rate limiting
     execSync('sleep 1');
   } catch (error) {
     console.error(`❌ Failed to create issue: ${issue.title}`);
     console.error(error.message);
+    failCount++;
   }
 });
 
-console.log('✨ Done! Check your GitHub repository for the created issues.');
+console.log('\n📊 Summary:');
+console.log(`   ✅ Successfully created: ${successCount} issues`);
+console.log(`   ❌ Failed: ${failCount} issues`);
+
+if (successCount > 0) {
+  console.log('\n💡 Next steps:');
+  console.log('   1. Visit https://github.com/ghodeaniket/LazyLearning/issues');
+  console.log('   2. Manually add issues to your project board if needed');
+  console.log('   3. Start working on Sprint 1-2: Authentication!');
+}

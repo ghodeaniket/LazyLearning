@@ -1,4 +1,6 @@
-import {DifficultyLevel} from '@types';
+// import {DifficultyLevel} from '@types';
+
+type DifficultyLevel = 'easy' | 'medium' | 'hard';
 
 interface ScoreCalculationParams {
   pizzasDelivered: number;

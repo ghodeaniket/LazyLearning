@@ -1,5 +1,6 @@
 // Game feature public API
-export * from './components';
-export * from './hooks';
-export * from './services';
-export * from './types';
+// Temporary placeholder exports until actual modules are implemented
+export const components = {};
+export const hooks = {};
+export const services = {};
+export const types = {};
