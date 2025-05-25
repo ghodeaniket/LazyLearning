@@ -37,7 +37,13 @@ module.exports = {
     },
   },
   testEnvironment: 'node',
+  modulePathIgnorePatterns: ['<rootDir>/node_modules'],
+  testPathIgnorePatterns: [
+    '<rootDir>/node_modules/',
+    '<rootDir>/ios/',
+    '<rootDir>/android/',
+  ],
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|@react-navigation|react-native-.*|@react-native-.*|@sentry|@react-native-firebase|@react-native-community|@tanstack)/)',
+    'node_modules/(?!(react-native|@react-native|@react-navigation|react-native-.*|@react-native-.*|@sentry|@react-native-firebase|@react-native-community|@tanstack|jail-monkey)/)',
   ],
 };

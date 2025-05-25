@@ -25,25 +25,43 @@ jest.mock('@react-native-firebase/auth', () => {
 });
 
 jest.mock('@react-native-firebase/firestore', () => {
+  const mockFieldValue = {
+    serverTimestamp: jest.fn(() => 'server-timestamp'),
+    delete: jest.fn(() => 'field-delete'),
+    increment: jest.fn((n) => `increment-${n}`),
+    arrayUnion: jest.fn((arr) => `array-union-${arr}`),
+    arrayRemove: jest.fn((arr) => `array-remove-${arr}`),
+  };
+
   const mockFirestore = {
     settings: jest.fn(),
     collection: jest.fn(() => ({
       doc: jest.fn(() => ({
-        get: jest.fn(),
-        set: jest.fn(),
-        update: jest.fn(),
-        delete: jest.fn(),
+        get: jest.fn(() => Promise.resolve({
+          exists: true,
+          data: () => ({ name: 'Test' }),
+        })),
+        set: jest.fn(() => Promise.resolve()),
+        update: jest.fn(() => Promise.resolve()),
+        delete: jest.fn(() => Promise.resolve()),
         onSnapshot: jest.fn(),
       })),
-      add: jest.fn(),
+      add: jest.fn(() => Promise.resolve({ id: 'test-doc-id' })),
       where: jest.fn(() => ({ get: jest.fn() })),
     })),
+    FieldValue: mockFieldValue,
   };
+
   mockFirestore.CACHE_SIZE_UNLIMITED = 1048576;
-  mockFirestore.FieldValue = {
-    serverTimestamp: jest.fn(() => 'server-timestamp'),
+  
+  const mockDefault = () => mockFirestore;
+  mockDefault.FieldValue = mockFieldValue;
+  
+  return {
+    __esModule: true,
+    default: mockDefault,
+    FieldValue: mockFieldValue,
   };
-  return () => mockFirestore;
 });
 
 jest.mock('@react-native-firebase/functions', () => {
@@ -67,15 +85,19 @@ jest.mock('@react-native-firebase/analytics', () => {
   return () => mockAnalytics;
 });
 
-jest.mock('@react-native-firebase/crashlytics', () => ({
-  default: () => ({
-    setCrashlyticsCollectionEnabled: jest.fn(),
+jest.mock('@react-native-firebase/crashlytics', () => {
+  const mockCrashlytics = {
+    setCrashlyticsCollectionEnabled: jest.fn(() => Promise.resolve()),
     recordError: jest.fn(),
     log: jest.fn(),
     setUserId: jest.fn(),
     setAttribute: jest.fn(),
-  }),
-}));
+  };
+  return {
+    __esModule: true,
+    default: () => mockCrashlytics,
+  };
+});
 
 jest.mock('react-native-config', () => ({
   FIREBASE_API_KEY: 'test-api-key',

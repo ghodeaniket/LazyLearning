@@ -14,7 +14,7 @@ describe('Encrypted Storage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Mock Keychain
+    // Mock Keychain to return our test key
     (Keychain.getInternetCredentials as jest.Mock).mockResolvedValue({
       username: 'encryption_key',
       password: mockEncryptionKey,
@@ -22,16 +22,21 @@ describe('Encrypted Storage', () => {
 
     (Keychain.setInternetCredentials as jest.Mock).mockResolvedValue(true);
 
-    // Mock CryptoJS
-    (CryptoJS.AES.encrypt as jest.Mock).mockReturnValue({
+    // Mock CryptoJS to use our test key consistently
+    (CryptoJS.AES.encrypt as jest.Mock).mockImplementation((data, key) => ({
       toString: () => 'encrypted-data',
-    });
+    }));
 
-    (CryptoJS.AES.decrypt as jest.Mock).mockReturnValue({
+    (CryptoJS.AES.decrypt as jest.Mock).mockImplementation((data, key) => ({
       toString: () => JSON.stringify({
         data: 'test-value',
         timestamp: Date.now(),
       }),
+    }));
+
+    // Mock random key generation to return our test key
+    (CryptoJS.lib.WordArray.random as jest.Mock).mockReturnValue({
+      toString: () => mockEncryptionKey,
     });
   });
 
