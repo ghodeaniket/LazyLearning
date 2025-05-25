@@ -1,4 +1,5 @@
 import Config from 'react-native-config';
+import axios from 'axios';
 import { encryptedStorage } from '../storage';
 import {
   FeatureFlag,
@@ -28,20 +29,14 @@ class RemoteFeatureFlagProvider implements IFeatureFlagProvider {
 
   async fetchFlags(): Promise<Record<string, FeatureFlag>> {
     try {
-      const response = await fetch(`${this.apiEndpoint}/feature-flags`, {
-        method: 'GET',
+      const response = await axios.get(`${this.apiEndpoint}/feature-flags`, {
         headers: {
-          'Content-Type': 'application/json',
           'X-API-Key': Config.FEATURE_FLAG_API_KEY || '',
         },
+        timeout: 10000, // 10 second timeout for feature flags
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch feature flags: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.flags || {};
+      return response.data.flags || {};
     } catch (error) {
       console.error('Error fetching feature flags:', error);
       return {};
@@ -50,17 +45,15 @@ class RemoteFeatureFlagProvider implements IFeatureFlagProvider {
 
   async reportUsage(flagKey: string, userId?: string): Promise<void> {
     try {
-      await fetch(`${this.apiEndpoint}/feature-flags/usage`, {
-        method: 'POST',
+      await axios.post(`${this.apiEndpoint}/feature-flags/usage`, {
+        flagKey,
+        userId,
+        timestamp: Date.now(),
+      }, {
         headers: {
-          'Content-Type': 'application/json',
           'X-API-Key': Config.FEATURE_FLAG_API_KEY || '',
         },
-        body: JSON.stringify({
-          flagKey,
-          userId,
-          timestamp: Date.now(),
-        }),
+        timeout: 5000, // 5 second timeout for usage reporting
       });
     } catch (error) {
       console.error('Error reporting feature flag usage:', error);

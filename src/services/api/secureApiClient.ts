@@ -1,12 +1,5 @@
+import { AxiosSecureClient } from './axiosSecureClient';
 import { ApiRequestConfig, ApiResponse } from './apiClient';
-import { securityHeaders } from '../security/headers';
-import { requestSigning } from '../security/requestSigning';
-import { certificatePinning } from '../security/certificatePinning';
-import { encryptionService } from '../security/encryption';
-import { deviceFingerprint } from '../security/deviceFingerprint';
-import { validationService } from '../security/validation';
-import { sessionManager } from '../security/sessionManager';
-import { errorHandler, ErrorSeverity } from '../monitoring';
 
 export interface SecureApiRequestConfig extends ApiRequestConfig {
   encrypt?: boolean;
@@ -17,8 +10,11 @@ export interface SecureApiRequestConfig extends ApiRequestConfig {
 
 export class SecureApiClient {
   private static instance: SecureApiClient;
+  private axiosSecureClient: AxiosSecureClient;
 
-  private constructor() {}
+  private constructor() {
+    this.axiosSecureClient = new AxiosSecureClient();
+  }
 
   static getInstance(): SecureApiClient {
     if (!SecureApiClient.instance) {
@@ -153,11 +149,8 @@ export class SecureApiClient {
   }
 
   async get<T>(endpoint: string, config?: SecureApiRequestConfig): Promise<T> {
-    const response = await this.request<T>(endpoint, {
-      ...config,
-      method: 'GET',
-    });
-    return response.data as T;
+    const response = await this.axiosSecureClient.get<T>(endpoint, config);
+    return response.data;
   }
 
   async post<T>(
@@ -165,18 +158,8 @@ export class SecureApiClient {
     data?: any,
     config?: SecureApiRequestConfig,
   ): Promise<T> {
-    // Validate input data if provided
-    if (data && config?.validateResponse !== false) {
-      const sanitized = this.sanitizeData(data);
-      data = sanitized;
-    }
-
-    const response = await this.request<T>(endpoint, {
-      ...config,
-      method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
-    });
-    return response.data as T;
+    const response = await this.axiosSecureClient.post<T>(endpoint, data, config);
+    return response.data;
   }
 
   async put<T>(
@@ -184,29 +167,16 @@ export class SecureApiClient {
     data?: any,
     config?: SecureApiRequestConfig,
   ): Promise<T> {
-    // Validate input data if provided
-    if (data && config?.validateResponse !== false) {
-      const sanitized = this.sanitizeData(data);
-      data = sanitized;
-    }
-
-    const response = await this.request<T>(endpoint, {
-      ...config,
-      method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
-    });
-    return response.data as T;
+    const response = await this.axiosSecureClient.put<T>(endpoint, data, config);
+    return response.data;
   }
 
   async delete<T>(
     endpoint: string,
     config?: SecureApiRequestConfig,
   ): Promise<T> {
-    const response = await this.request<T>(endpoint, {
-      ...config,
-      method: 'DELETE',
-    });
-    return response.data as T;
+    const response = await this.axiosSecureClient.delete<T>(endpoint, config);
+    return response.data;
   }
 
   private sanitizeData(data: any): any {
@@ -234,10 +204,11 @@ export class SecureApiClient {
     endpoint: string,
     config?: Omit<SecureApiRequestConfig, 'sign'>,
   ): Promise<T> {
-    return this.get<T>(endpoint, {
+    const response = await this.axiosSecureClient.secureRequest<T>(endpoint, {
+      method: 'GET',
       ...config,
-      sign: true,
     });
+    return response.data;
   }
 
   async encryptedPost<T>(
@@ -245,11 +216,12 @@ export class SecureApiClient {
     data?: any,
     config?: Omit<SecureApiRequestConfig, 'encrypt' | 'sign'>,
   ): Promise<T> {
-    return this.post<T>(endpoint, data, {
+    const response = await this.axiosSecureClient.secureRequest<T>(endpoint, {
+      method: 'POST',
+      data,
       ...config,
-      encrypt: true,
-      sign: true,
     });
+    return response.data;
   }
 
   async sensitiveDataPost<T>(
@@ -258,11 +230,10 @@ export class SecureApiClient {
     sensitiveFields: string[],
     config?: Omit<SecureApiRequestConfig, 'sensitiveFields' | 'sign'>,
   ): Promise<T> {
-    return this.post<T>(endpoint, data, {
+    const response = await this.axiosSecureClient.securePaymentRequest<T>(endpoint, data, {
       ...config,
-      sensitiveFields,
-      sign: true,
     });
+    return response.data;
   }
 }
 

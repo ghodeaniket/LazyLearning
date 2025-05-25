@@ -53,28 +53,12 @@ export class CertificatePinningService {
   }
 
   async fetch(url: string, options?: RequestInit): Promise<Response> {
-    // Skip pinning in development
-    if (this.isDevelopment) {
-      return fetch(url, options);
-    }
-
-    const hostname = new URL(url).hostname;
-    const pins = this.getPinsForHostname(hostname);
-
-    if (pins.length === 0) {
-      // No pins configured for this hostname
-      console.warn(`No certificate pins configured for ${hostname}`);
-      return fetch(url, options);
-    }
+    // MVP: Certificate pinning is not implemented
+    // In development and MVP, we'll use standard fetch
+    console.warn('Certificate pinning is not implemented in MVP version');
 
     try {
-      // On iOS and Android, we would use native modules for certificate pinning
-      // For now, we'll use standard fetch with additional validation
-      const response = await fetch(url, {
-        ...options,
-        // React Native doesn't support direct certificate pinning in fetch
-        // This would be implemented with native modules
-      });
+      const response = await fetch(url, options);
 
       // Validate response headers for additional security
       this.validateSecurityHeaders(response.headers);
@@ -83,13 +67,13 @@ export class CertificatePinningService {
     } catch (error) {
       errorHandler.handle(
         errorHandler.createError(
-          'Certificate pinning failed',
-          'CERT_PIN_ERROR',
+          'Network request failed',
+          'NETWORK_ERROR',
           {
-            severity: ErrorSeverity.HIGH,
-            userMessage: 'Secure connection failed. Please try again.',
+            severity: ErrorSeverity.MEDIUM,
+            userMessage: 'Connection failed. Please try again.',
             context: {
-              hostname,
+              url,
               error: error instanceof Error ? error.message : 'Unknown error',
             },
           },
