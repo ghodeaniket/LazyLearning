@@ -1,26 +1,11 @@
-import {configureStore} from '@reduxjs/toolkit';
-import {setupListeners} from '@reduxjs/toolkit/query';
+import { configureStore } from '@reduxjs/toolkit';
 
-// Import reducers (to be added)
-// import authReducer from '@features/auth/authSlice';
-// import gameReducer from '@features/game/gameSlice';
-// import learningReducer from '@features/learning/learningSlice';
-
+// Placeholder store configuration
 export const store = configureStore({
   reducer: {
-    // auth: authReducer,
-    // game: gameReducer,
-    // learning: learningReducer,
+    // Add reducers here as features are implemented
   },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
-      },
-    }),
 });
-
-setupListeners(store.dispatch);
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

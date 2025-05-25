@@ -1,4 +1,4 @@
-import { AxiosClient } from './axiosClient';
+import { AxiosApiClient } from './axiosClient';
 
 export interface ApiRequestConfig {
   skipAuth?: boolean;
@@ -18,10 +18,10 @@ export interface ApiResponse<T = any> {
 
 export class ApiClient {
   private static instance: ApiClient;
-  private axiosClient: AxiosClient;
+  private axiosClient: AxiosApiClient;
 
   private constructor() {
-    this.axiosClient = new AxiosClient();
+    this.axiosClient = AxiosApiClient.getInstance();
   }
 
   static getInstance(): ApiClient {
@@ -66,8 +66,7 @@ export class ApiClient {
   }
 
   async get<T>(endpoint: string, config?: ApiRequestConfig): Promise<T> {
-    const response = await this.axiosClient.get<T>(endpoint, config);
-    return response.data;
+    return this.axiosClient.get<T>(endpoint, config);
   }
 
   async post<T>(
@@ -75,8 +74,7 @@ export class ApiClient {
     data?: any,
     config?: ApiRequestConfig,
   ): Promise<T> {
-    const response = await this.axiosClient.post<T>(endpoint, data, config);
-    return response.data;
+    return this.axiosClient.post<T>(endpoint, data, config);
   }
 
   async put<T>(
@@ -84,16 +82,14 @@ export class ApiClient {
     data?: any,
     config?: ApiRequestConfig,
   ): Promise<T> {
-    const response = await this.axiosClient.put<T>(endpoint, data, config);
-    return response.data;
+    return this.axiosClient.put<T>(endpoint, data, config);
   }
 
   async delete<T>(
     endpoint: string,
     config?: ApiRequestConfig,
   ): Promise<T> {
-    const response = await this.axiosClient.delete<T>(endpoint, config);
-    return response.data;
+    return this.axiosClient.delete<T>(endpoint, config);
   }
 
 }

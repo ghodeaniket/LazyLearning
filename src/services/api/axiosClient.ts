@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
 import Config from 'react-native-config';
 import NetInfo from '@react-native-community/netinfo';
 import { tokenManager } from '../auth/tokenManager';
@@ -7,7 +7,28 @@ import { errorHandler, ErrorSeverity } from '../monitoring';
 import { sentryService } from '../monitoring/sentry';
 import { featureFlagService, FeatureFlags } from '../featureFlags';
 
-export interface ApiRequestConfig extends AxiosRequestConfig {
+interface CustomAxiosRequestConfig extends AxiosRequestConfig {
+  metadata?: {
+    startTime?: number;
+    requestId?: string;
+    [key: string]: any;
+  };
+}
+
+interface CustomInternalAxiosRequestConfig extends InternalAxiosRequestConfig {
+  metadata?: {
+    startTime?: number;
+    requestId?: string;
+    [key: string]: any;
+  };
+  _retry?: boolean;
+  retries?: number;
+  retryDelay?: number;
+  skipAuth?: boolean;
+  skipRateLimit?: boolean;
+}
+
+export interface ApiRequestConfig extends CustomAxiosRequestConfig {
   skipAuth?: boolean;
   skipRateLimit?: boolean;
   retries?: number;
@@ -63,8 +84,8 @@ export class AxiosApiClient {
 
     // Response interceptor
     this.responseInterceptorId = this.axiosInstance.interceptors.response.use(
-      (response) => {
-        this.handleResponseSuccess(response);
+      async (response) => {
+        await this.handleResponseSuccess(response);
         return response;
       },
       async (error) => {
@@ -73,7 +94,7 @@ export class AxiosApiClient {
     );
   }
 
-  private async handleRequestInterceptor(config: AxiosRequestConfig): Promise<void> {
+  private async handleRequestInterceptor(config: CustomInternalAxiosRequestConfig): Promise<void> {
     const customConfig = config as ApiRequestConfig;
 
     // Add performance tracking
@@ -147,19 +168,16 @@ export class AxiosApiClient {
     });
   }
 
-  private async addAuthHeaders(config: AxiosRequestConfig): Promise<void> {
+  private async addAuthHeaders(config: CustomInternalAxiosRequestConfig): Promise<void> {
     try {
-      // Check if token is expired and refresh if needed
-      const isExpired = await tokenManager.isTokenExpired();
-      if (isExpired) {
-        await tokenManager.refreshTokens();
-      }
-
+      // Get auth headers (tokenManager handles refresh internally)
       const authHeaders = await tokenManager.getAuthHeaders();
-      config.headers = {
-        ...config.headers,
-        ...authHeaders,
-      };
+      if (!config.headers) {
+        config.headers = new AxiosHeaders();
+      }
+      Object.entries(authHeaders).forEach(([key, value]) => {
+        (config.headers as AxiosHeaders).set(key, value);
+      });
     } catch (error) {
       console.warn('Failed to add auth headers:', error);
     }
@@ -176,13 +194,14 @@ export class AxiosApiClient {
     );
   }
 
-  private handleResponseSuccess(response: AxiosResponse): void {
-    const enableDebug = featureFlagService.isEnabled(FeatureFlags.ENABLE_DEBUG_MODE);
-    const enablePerformance = featureFlagService.isEnabled(FeatureFlags.ENABLE_PERFORMANCE_MONITORING);
+  private async handleResponseSuccess(response: AxiosResponse): Promise<void> {
+    const enableDebug = await featureFlagService.isEnabled(FeatureFlags.ENABLE_DEBUG_MODE);
+    const enablePerformance = await featureFlagService.isEnabled(FeatureFlags.ENABLE_PERFORMANCE_MONITORING);
 
+    const customConfig = response.config as CustomInternalAxiosRequestConfig;
     // Performance logging
-    if (enablePerformance && response.config.metadata?.startTime) {
-      const duration = Date.now() - response.config.metadata.startTime;
+    if (enablePerformance && customConfig.metadata?.startTime) {
+      const duration = Date.now() - customConfig.metadata.startTime;
 
       if (duration > 3000) {
         console.warn('[Performance] Slow API request detected:', {
@@ -228,23 +247,23 @@ export class AxiosApiClient {
   }
 
   private async handleResponseError(error: AxiosError): Promise<never> {
-    const customConfig = error.config as ApiRequestConfig;
+    const customConfig = error.config as CustomInternalAxiosRequestConfig;
 
     // Handle token refresh for 401 errors
-    if (error.response?.status === 401 && !error.config?._retry) {
+    if (error.response?.status === 401 && !customConfig?._retry && customConfig) {
       try {
         await tokenManager.refreshTokens();
 
         // Retry the original request
-        if (error.config) {
-          error.config._retry = true;
-          const authHeaders = await tokenManager.getAuthHeaders();
-          error.config.headers = {
-            ...error.config.headers,
-            ...authHeaders,
-          };
-          return this.axiosInstance.request(error.config);
+        customConfig._retry = true;
+        const authHeaders = await tokenManager.getAuthHeaders();
+        if (!customConfig.headers) {
+          customConfig.headers = new AxiosHeaders();
         }
+        Object.entries(authHeaders).forEach(([key, value]) => {
+          (customConfig.headers as AxiosHeaders).set(key, value);
+        });
+        return this.axiosInstance.request(customConfig);
       } catch (refreshError) {
         // Refresh failed, redirect to login
         console.error('Token refresh failed:', refreshError);
@@ -266,7 +285,7 @@ export class AxiosApiClient {
       customConfig.retries--;
       const delay = customConfig.retryDelay || 1000;
 
-      await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, (customConfig.retries || 0))));
+      await new Promise<void>(resolve => setTimeout(resolve, delay * Math.pow(2, (customConfig.retries || 0))));
 
       return this.axiosInstance.request(error.config!);
     }
@@ -321,7 +340,7 @@ export class AxiosApiClient {
     sentryService.captureException(apiError, {
       tags: {
         errorType: 'api_error',
-        httpStatus: error.response?.status?.toString(),
+        httpStatus: error.response?.status?.toString() || 'unknown',
       },
       extra: {
         url: error.config?.url,

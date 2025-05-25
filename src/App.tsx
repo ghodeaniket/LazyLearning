@@ -5,7 +5,7 @@ import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {Provider} from 'react-redux';
 import {QueryClientProvider} from '@tanstack/react-query';
 import {StyleSheet, View, Text} from 'react-native';
-import {store} from '@store';
+import {store} from '@store/index';
 import {queryClient} from '@services/queryClient';
 import {initializeFirebaseServices} from '@services/firebase';
 import {initializeStorage} from '@services/storage';

@@ -57,7 +57,7 @@ export class RetryRequestExecutor implements IRequestExecutor {
         lastError = error as Error;
         if (attempt < this.maxRetries) {
           const delay = this.baseDelay * Math.pow(2, attempt);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise<void>(resolve => setTimeout(resolve, delay));
         }
       }
     }
