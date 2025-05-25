@@ -9,7 +9,7 @@ jest.mock('../storage', () => ({
 }));
 
 // Mock fetch globally
-(global as any).fetch = jest.fn(() =>
+(globalThis as any).fetch = jest.fn(() =>
   Promise.resolve({
     ok: true,
     status: 200,

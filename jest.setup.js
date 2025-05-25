@@ -282,3 +282,11 @@ global.console = {
   warn: jest.fn(),
   log: jest.fn(),
 };
+
+// Clear all timers after each test
+afterEach(() => {
+  jest.clearAllTimers();
+});
+
+// Use fake timers
+jest.useFakeTimers();

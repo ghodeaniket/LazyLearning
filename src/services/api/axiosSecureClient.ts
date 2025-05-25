@@ -261,13 +261,13 @@ export class AxiosSecureApiClient {
     url: string,
     data: any,
     sensitiveFields: string[],
-    config?: Omit<SecureApiRequestConfig, 'sensitiveFields' | 'sign'>
+    config?: Omit<SecureApiRequestConfig, 'sensitiveFields'>
   ): Promise<T> {
     return this.post<T>(url, data, {
       ...config,
       sensitiveFields,
-      sign: true,
-      requireCsrf: true,
+      sign: config?.sign !== false, // Default to true unless explicitly set to false
+      requireCsrf: config?.requireCsrf !== false, // Default to true unless explicitly set to false
     });
   }
 

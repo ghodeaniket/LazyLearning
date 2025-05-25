@@ -1,10 +1,14 @@
 import Config from 'react-native-config';
 import NetInfo from '@react-native-community/netinfo';
-import { IApiClient, ApiRequestConfig, ApiResponse } from '../interfaces/api.interface';
+import { IApiClient, ApiRequestConfig as IApiRequestConfig, ApiResponse as IApiResponse } from '../interfaces/api.interface';
 import { ITokenManager } from '../interfaces/auth.interface';
 import { IRateLimiter } from '../interfaces/api.interface';
 import { errorHandler, ErrorSeverity } from '../monitoring';
 import { featureFlagService, FeatureFlags } from '../featureFlags';
+
+// Re-export for interceptors
+export type ApiRequestConfig = IApiRequestConfig;
+export type ApiResponse<T> = IApiResponse<T>;
 
 // Request interceptor interface
 export interface IRequestInterceptor {

@@ -93,3 +93,6 @@ artifacts/
 
 # TypeScript
 *.tsbuildinfo
+
+# Implementation Plan (private documentation)
+docs/IMPLEMENTATION_PLAN_V2.md

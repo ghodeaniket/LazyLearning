@@ -1,4 +1,4 @@
-import { AxiosSecureClient } from './axiosSecureClient';
+import { AxiosSecureApiClient } from './axiosSecureClient';
 import { ApiRequestConfig, ApiResponse } from './apiClient';
 
 export interface SecureApiRequestConfig extends ApiRequestConfig {
@@ -10,10 +10,10 @@ export interface SecureApiRequestConfig extends ApiRequestConfig {
 
 export class SecureApiClient {
   private static instance: SecureApiClient;
-  private axiosSecureClient: AxiosSecureClient;
+  private axiosSecureClient: AxiosSecureApiClient;
 
   private constructor() {
-    this.axiosSecureClient = new AxiosSecureClient();
+    this.axiosSecureClient = AxiosSecureApiClient.getInstance();
   }
 
   static getInstance(): SecureApiClient {
