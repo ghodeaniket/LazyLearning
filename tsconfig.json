@@ -26,7 +26,7 @@
     "isolatedModules": true,
     "jsx": "react-native",
     "lib": ["es2020"],
-    "types": ["jest", "react-native"]
+    "types": ["jest", "react-native", "node"]
   },
   "include": [
     "src/**/*",

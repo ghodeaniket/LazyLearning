@@ -1,7 +1,7 @@
 import { ErrorHandler, ErrorSeverity } from '../errorHandler';
 import { sentryService } from '../sentry';
 import { Alert } from 'react-native';
-import crashlytics from '@react-native-firebase/crashlytics';
+// import crashlytics from '@react-native-firebase/crashlytics';
 
 // Mock dependencies
 jest.mock('../sentry');
@@ -10,15 +10,16 @@ jest.mock('react-native', () => ({
     alert: jest.fn(),
   },
 }));
+const mockRecordError = jest.fn();
 jest.mock('@react-native-firebase/crashlytics', () => ({
   __esModule: true,
   default: () => ({
-    recordError: jest.fn(),
+    recordError: mockRecordError,
   }),
 }));
 
 // Mock global ErrorUtils
-global.ErrorUtils = {
+(global as any).ErrorUtils = {
   setGlobalHandler: jest.fn(),
   getGlobalHandler: jest.fn(),
 };
@@ -33,15 +34,14 @@ describe('ErrorHandler', () => {
     instance = ErrorHandler.getInstance();
 
     // Mock console methods
-    global.console.error = jest.fn();
+    (global as any).console.error = jest.fn();
 
     // Mock sentry
     (sentryService.captureException as jest.Mock).mockImplementation(() => {});
     (sentryService.addBreadcrumb as jest.Mock).mockImplementation(() => {});
 
-    // Mock crashlytics
-    const mockCrashlytics = crashlytics();
-    (mockCrashlytics.recordError as jest.Mock).mockImplementation(() => {});
+    // Clear crashlytics mock
+    mockRecordError.mockClear();
   });
 
   describe('getInstance', () => {
@@ -112,8 +112,7 @@ describe('ErrorHandler', () => {
       const error = new Error('Test error');
       instance.handle(error);
 
-      const mockCrashlytics = crashlytics();
-      expect(mockCrashlytics.recordError).toHaveBeenCalledWith(expect.any(Object));
+      expect(mockRecordError).toHaveBeenCalledWith(expect.any(Object));
     });
 
     it('should show user alert when showAlert is true and userMessage exists', () => {
@@ -246,14 +245,14 @@ describe('ErrorHandler', () => {
     it('should setup global error handler', () => {
       instance.setupGlobalHandlers();
 
-      expect(global.ErrorUtils.setGlobalHandler).toHaveBeenCalledWith(
+      expect((global as any).ErrorUtils.setGlobalHandler).toHaveBeenCalledWith(
         expect.any(Function),
       );
     });
 
     it('should handle fatal errors', () => {
       let errorHandler: Function;
-      (global.ErrorUtils.setGlobalHandler as jest.Mock).mockImplementation(handler => {
+      ((global as any).ErrorUtils.setGlobalHandler as jest.Mock).mockImplementation(handler => {
         errorHandler = handler;
       });
 
@@ -281,7 +280,7 @@ describe('ErrorHandler', () => {
 
     it('should handle non-fatal errors', () => {
       let errorHandler: Function;
-      (global.ErrorUtils.setGlobalHandler as jest.Mock).mockImplementation(handler => {
+      ((global as any).ErrorUtils.setGlobalHandler as jest.Mock).mockImplementation(handler => {
         errorHandler = handler;
       });
 
@@ -296,10 +295,10 @@ describe('ErrorHandler', () => {
 
     it('should call original handler if exists', () => {
       const originalHandler = jest.fn();
-      (global.ErrorUtils.getGlobalHandler as jest.Mock).mockReturnValue(originalHandler);
+      ((global as any).ErrorUtils.getGlobalHandler as jest.Mock).mockReturnValue(originalHandler);
 
       let errorHandler: Function;
-      (global.ErrorUtils.setGlobalHandler as jest.Mock).mockImplementation(handler => {
+      ((global as any).ErrorUtils.setGlobalHandler as jest.Mock).mockImplementation(handler => {
         errorHandler = handler;
       });
 

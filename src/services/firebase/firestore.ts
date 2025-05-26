@@ -156,7 +156,7 @@ export class FirestoreService {
       .doc(docId)
       .onSnapshot(
         doc => {
-          if (doc.exists) {
+          if (doc.exists()) {
             onUpdate({ id: doc.id, ...doc.data() } as T);
           } else {
             onUpdate(null);

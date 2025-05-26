@@ -23,6 +23,9 @@ describe('RateLimiter', () => {
       (instance as any).cleanupInterval = undefined;
     }
 
+    // Clear the internal cache
+    (instance as any).cache.clear();
+
     // Mock storage methods
     (encryptedStorage.get as jest.Mock).mockResolvedValue(null);
     (encryptedStorage.set as jest.Mock).mockResolvedValue(undefined);

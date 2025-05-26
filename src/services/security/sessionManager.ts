@@ -27,8 +27,8 @@ export class SessionManager {
   private static instance: SessionManager;
   private readonly SESSION_KEY = 'active_session';
   private currentSession?: Session;
-  private inactivityTimer?: NodeJS.Timeout;
-  private warningTimer?: NodeJS.Timeout;
+  private inactivityTimer?: ReturnType<typeof setTimeout>;
+  private warningTimer?: ReturnType<typeof setTimeout>;
   private appStateSubscription?: any;
   private lastBackgroundTime?: number;
 
@@ -299,8 +299,8 @@ export class SessionManager {
       randomBytes[i] = Math.floor(Math.random() * 256);
     }
 
-    // Convert to base64
-    return btoa(String.fromCharCode.apply(null, Array.from(randomBytes)));
+    // Convert to hex string (btoa not available in React Native)
+    return Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join('');
   }
 
   // Get CSRF token for current session

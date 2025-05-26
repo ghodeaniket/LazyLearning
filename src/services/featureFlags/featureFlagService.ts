@@ -71,7 +71,7 @@ export class FeatureFlagService implements IFeatureFlagService {
     enableCache: true,
     enableRemoteConfig: false,
   };
-  private refreshTimer?: NodeJS.Timeout;
+  private refreshTimer?: ReturnType<typeof setInterval>;
   private readonly CACHE_KEY = 'feature_flags_cache';
 
   private constructor() {

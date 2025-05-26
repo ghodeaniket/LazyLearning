@@ -1,4 +1,7 @@
 import firebase from '@react-native-firebase/app';
+import type { ReactNativeFirebase } from '@react-native-firebase/app';
+
+type FirebaseApp = ReactNativeFirebase.FirebaseApp;
 import Config from 'react-native-config';
 
 interface FirebaseConfig {
@@ -21,16 +24,16 @@ const firebaseConfig: FirebaseConfig = {
   measurementId: Config.FIREBASE_MEASUREMENT_ID,
 };
 
-let app: firebase.FirebaseApp;
+let app: FirebaseApp;
 
-export const initializeFirebase = (): firebase.FirebaseApp => {
+export const initializeFirebase = (): FirebaseApp => {
   if (!app) {
-    app = firebase.initializeApp(firebaseConfig);
+    app = firebase.initializeApp(firebaseConfig) as any;
   }
   return app;
 };
 
-export const getFirebaseApp = (): firebase.FirebaseApp => {
+export const getFirebaseApp = (): FirebaseApp => {
   if (!app) {
     throw new Error('Firebase not initialized. Call initializeFirebase() first.');
   }

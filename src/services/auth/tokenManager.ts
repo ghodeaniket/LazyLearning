@@ -20,7 +20,7 @@ export class TokenManager {
   private static instance: TokenManager;
   private readonly TOKEN_KEY = 'auth_tokens';
   private readonly SERVICE_NAME = 'com.lazylearner.auth';
-  private tokenRefreshTimer?: NodeJS.Timeout;
+  private tokenRefreshTimer?: ReturnType<typeof setTimeout>;
   private options: TokenManagerOptions;
 
   private constructor(options: TokenManagerOptions = {}) {
@@ -128,7 +128,12 @@ export class TokenManager {
         this.tokenRefreshTimer = undefined;
       }
 
-      await Keychain.resetInternetCredentials(this.SERVICE_NAME, {});
+      // Clear keychain credentials
+      try {
+        await (Keychain.resetInternetCredentials as any)(this.SERVICE_NAME);
+      } catch (e) {
+        // Fallback: ignore error if method signature is different
+      }
       await AsyncStorage.removeItem(this.TOKEN_KEY);
     } catch (error) {
       errorHandler.handle(

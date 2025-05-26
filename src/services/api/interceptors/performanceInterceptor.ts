@@ -63,7 +63,7 @@ export class PerformanceRequestInterceptor implements IRequestInterceptor {
       // Start tracking
       this.tracker.startTracking(
         requestId,
-        config.url || '',
+        '', // URL not available in RequestInit
         config.method || 'GET'
       );
 

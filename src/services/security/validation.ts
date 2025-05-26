@@ -318,12 +318,10 @@ export class ValidationService {
         { type: 'maxLength', value: 16, message: 'Username too long' },
       ],
       displayName: [
-        { type: 'maxLength', value: 50, message: 'Display name too long' },
-        { sanitize: true },
+        { type: 'maxLength', value: 50, message: 'Display name too long', sanitize: true },
       ],
       bio: [
-        { type: 'maxLength', value: 500, message: 'Bio too long' },
-        { sanitize: true },
+        { type: 'maxLength', value: 500, message: 'Bio too long', sanitize: true },
       ],
     };
   }

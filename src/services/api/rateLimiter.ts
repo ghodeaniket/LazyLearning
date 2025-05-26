@@ -21,7 +21,7 @@ export class RateLimiter {
   private static instance: RateLimiter;
   private rules: RateLimitRule[] = [];
   private cache: Map<string, RateLimitEntry> = new Map();
-  private cleanupInterval?: NodeJS.Timeout;
+  private cleanupInterval?: ReturnType<typeof setInterval>;
 
   private constructor() {
     this.startCleanupTask();

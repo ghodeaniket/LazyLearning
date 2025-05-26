@@ -1,5 +1,5 @@
 import MockAdapter from 'axios-mock-adapter';
-import { axiosClient } from '../axiosClient';
+import { axiosApiClient } from '../axiosClient';
 import { tokenManager } from '../../auth/tokenManager';
 import { rateLimiter } from '../rateLimiter';
 import { errorHandler } from '../../monitoring';
@@ -20,12 +20,12 @@ describe('axiosClient', () => {
   let mock: MockAdapter;
 
   beforeEach(() => {
-    mock = new MockAdapter(axiosClient);
+    mock = new MockAdapter(axiosApiClient.getAxiosInstance());
     jest.clearAllMocks();
 
     // Setup default mocks
     (tokenManager.getAccessToken as jest.Mock).mockResolvedValue('test-token');
-    (tokenManager.refreshToken as jest.Mock).mockResolvedValue(true);
+    (tokenManager.refreshTokens as jest.Mock).mockResolvedValue(true);
     (rateLimiter.checkLimit as jest.Mock).mockResolvedValue(true);
     // Security mocks removed - not needed for MVP
     (errorHandler.handle as jest.Mock).mockImplementation(() => {});
@@ -39,7 +39,7 @@ describe('axiosClient', () => {
     it('should add auth token to requests', async () => {
       mock.onGet('/test').reply(200, { data: 'test' });
 
-      await axiosClient.get('/test');
+      await axiosApiClient.get('/test');
 
       expect(tokenManager.getAccessToken).toHaveBeenCalled();
       expect(mock.history.get[0].headers?.Authorization).toBe('Bearer test-token');
@@ -48,7 +48,7 @@ describe('axiosClient', () => {
     it('should not add auth token when skipAuth is true', async () => {
       mock.onGet('/public').reply(200, { data: 'public' });
 
-      await axiosClient.get('/public', { skipAuth: true });
+      await axiosApiClient.get('/public', { skipAuth: true });
 
       expect(tokenManager.getAccessToken).not.toHaveBeenCalled();
       expect(mock.history.get[0].headers?.Authorization).toBeUndefined();
@@ -57,7 +57,7 @@ describe('axiosClient', () => {
     it('should check rate limits', async () => {
       mock.onGet('/test').reply(200, { data: 'test' });
 
-      await axiosClient.get('/test');
+      await axiosApiClient.get('/test');
 
       expect(rateLimiter.checkLimit).toHaveBeenCalledWith('/test', undefined);
     });
@@ -65,7 +65,7 @@ describe('axiosClient', () => {
     it('should block rate limited requests', async () => {
       (rateLimiter.checkLimit as jest.Mock).mockResolvedValue(false);
 
-      await expect(axiosClient.get('/test')).rejects.toThrow('Rate limit exceeded');
+      await expect(axiosApiClient.get('/test')).rejects.toThrow('Rate limit exceeded');
       expect(mock.history.get.length).toBe(0);
     });
 
@@ -78,9 +78,9 @@ describe('axiosClient', () => {
     it('should handle successful responses', async () => {
       mock.onGet('/test').reply(200, { data: 'success' });
 
-      const response = await axiosClient.get('/test');
+      const response = await axiosApiClient.get('/test');
 
-      expect(response.data).toEqual({ data: 'success' });
+      expect(response).toEqual({ data: 'success' });
       expect(errorHandler.handle).not.toHaveBeenCalled();
     });
 
@@ -90,31 +90,31 @@ describe('axiosClient', () => {
       // After token refresh, retry succeeds
       mock.onGet('/test').replyOnce(200, { data: 'success' });
 
-      const response = await axiosClient.get('/test');
+      const response = await axiosApiClient.get('/test');
 
-      expect(tokenManager.refreshToken).toHaveBeenCalled();
-      expect(response.data).toEqual({ data: 'success' });
+      expect(tokenManager.refreshTokens).toHaveBeenCalled();
+      expect(response).toEqual({ data: 'success' });
     });
 
     it('should fail when token refresh fails', async () => {
-      (tokenManager.refreshToken as jest.Mock).mockResolvedValue(false);
+      (tokenManager.refreshTokens as jest.Mock).mockResolvedValue(false);
       mock.onGet('/test').reply(401);
 
-      await expect(axiosClient.get('/test')).rejects.toThrow();
+      await expect(axiosApiClient.get('/test')).rejects.toThrow();
       expect(errorHandler.handle).toHaveBeenCalled();
     });
 
     it('should not refresh token when skipAuth is true', async () => {
       mock.onGet('/public').reply(401);
 
-      await expect(axiosClient.get('/public', { skipAuth: true })).rejects.toThrow();
-      expect(tokenManager.refreshToken).not.toHaveBeenCalled();
+      await expect(axiosApiClient.get('/public', { skipAuth: true })).rejects.toThrow();
+      expect(tokenManager.refreshTokens).not.toHaveBeenCalled();
     });
 
     it('should handle network errors', async () => {
       mock.onGet('/test').networkError();
 
-      await expect(axiosClient.get('/test')).rejects.toThrow();
+      await expect(axiosApiClient.get('/test')).rejects.toThrow();
       expect(errorHandler.handle).toHaveBeenCalledWith(
         expect.objectContaining({
           code: 'NETWORK_ERROR',
@@ -126,7 +126,7 @@ describe('axiosClient', () => {
     it('should handle timeout errors', async () => {
       mock.onGet('/test').timeout();
 
-      await expect(axiosClient.get('/test')).rejects.toThrow();
+      await expect(axiosApiClient.get('/test')).rejects.toThrow();
       expect(errorHandler.handle).toHaveBeenCalledWith(
         expect.objectContaining({
           code: 'TIMEOUT_ERROR',
@@ -140,7 +140,7 @@ describe('axiosClient', () => {
         errors: [{ field: 'email', message: 'Invalid email' }],
       });
 
-      await expect(axiosClient.post('/test', {})).rejects.toThrow();
+      await expect(axiosApiClient.post('/test', {})).rejects.toThrow();
       expect(errorHandler.handle).toHaveBeenCalledWith(
         expect.objectContaining({
           code: 'VALIDATION_ERROR',
@@ -152,7 +152,7 @@ describe('axiosClient', () => {
     it('should handle server errors (500)', async () => {
       mock.onGet('/test').reply(500, { error: 'Internal server error' });
 
-      await expect(axiosClient.get('/test')).rejects.toThrow();
+      await expect(axiosApiClient.get('/test')).rejects.toThrow();
       expect(errorHandler.handle).toHaveBeenCalledWith(
         expect.objectContaining({
           code: 'SERVER_ERROR',
@@ -166,7 +166,7 @@ describe('axiosClient', () => {
     it('should handle custom timeout', async () => {
       mock.onGet('/slow').reply(200, { data: 'slow' });
 
-      await axiosClient.get('/slow', { timeout: 5000 });
+      await axiosApiClient.get('/slow', { timeout: 5000 });
 
       expect(mock.history.get[0].timeout).toBe(5000);
     });
@@ -174,7 +174,7 @@ describe('axiosClient', () => {
     it('should handle custom headers', async () => {
       mock.onGet('/test').reply(200, { data: 'test' });
 
-      await axiosClient.get('/test', {
+      await axiosApiClient.get('/test', {
         headers: { 'X-Custom': 'value' },
       });
 
@@ -186,7 +186,7 @@ describe('axiosClient', () => {
     it('should handle custom base URL', async () => {
       mock.onGet('https://other.com/test').reply(200, { data: 'test' });
 
-      await axiosClient.get('/test', {
+      await axiosApiClient.get('/test', {
         baseURL: 'https://other.com',
       });
 
@@ -199,42 +199,42 @@ describe('axiosClient', () => {
     it('should support GET requests', async () => {
       mock.onGet('/users').reply(200, [{ id: 1, name: 'Test' }]);
 
-      const response = await axiosClient.get('/users');
+      const response = await axiosApiClient.get('/users');
 
-      expect(response.data).toEqual([{ id: 1, name: 'Test' }]);
+      expect(response).toEqual([{ id: 1, name: 'Test' }]);
     });
 
     it('should support POST requests', async () => {
       mock.onPost('/users').reply(201, { id: 2, name: 'New User' });
 
-      const response = await axiosClient.post('/users', { name: 'New User' });
+      const response = await axiosApiClient.post('/users', { name: 'New User' });
 
-      expect(response.data).toEqual({ id: 2, name: 'New User' });
+      expect(response).toEqual({ id: 2, name: 'New User' });
       expect(mock.history.post[0].data).toBe(JSON.stringify({ name: 'New User' }));
     });
 
     it('should support PUT requests', async () => {
       mock.onPut('/users/1').reply(200, { id: 1, name: 'Updated' });
 
-      const response = await axiosClient.put('/users/1', { name: 'Updated' });
+      const response = await axiosApiClient.put('/users/1', { name: 'Updated' });
 
-      expect(response.data).toEqual({ id: 1, name: 'Updated' });
+      expect(response).toEqual({ id: 1, name: 'Updated' });
     });
 
     it('should support DELETE requests', async () => {
-      mock.onDelete('/users/1').reply(204);
+      mock.onDelete('/users/1').reply(204, null);
 
-      const response = await axiosClient.delete('/users/1');
+      const response = await axiosApiClient.delete('/users/1');
 
-      expect(response.status).toBe(204);
+      expect(response).toBeNull();
     });
 
     it('should support PATCH requests', async () => {
       mock.onPatch('/users/1').reply(200, { id: 1, name: 'Patched' });
 
-      const response = await axiosClient.patch('/users/1', { name: 'Patched' });
+      const response = await axiosApiClient.patch('/users/1', { name: 'Patched' });
 
-      expect(response.data).toEqual({ id: 1, name: 'Patched' });
+      expect(response).toEqual({ id: 1, name: 'Patched' });
     });
   });
 
@@ -251,7 +251,7 @@ describe('axiosClient', () => {
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
       mock.onGet('/test').reply(200, { data: 'test' });
 
-      await axiosClient.get('/test');
+      await axiosApiClient.get('/test');
 
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining('API Request:'),

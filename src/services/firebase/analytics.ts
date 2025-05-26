@@ -85,7 +85,7 @@ export class AnalyticsService {
 
   async logLevelStart(level: string): Promise<void> {
     try {
-      await this.analyticsInstance.logLevelStart({ level });
+      await this.analyticsInstance.logLevelStart({ level: parseInt(level, 10) || 0 });
     } catch (error) {
       console.error('Analytics error:', error);
       crashlytics().recordError(error as Error);
@@ -94,7 +94,7 @@ export class AnalyticsService {
 
   async logLevelEnd(level: string, success: boolean): Promise<void> {
     try {
-      await this.analyticsInstance.logLevelEnd({ level, success: success ? '1' : '0' });
+      await this.analyticsInstance.logLevelEnd({ level: parseInt(level, 10) || 0, success: success ? '1' : '0' });
     } catch (error) {
       console.error('Analytics error:', error);
       crashlytics().recordError(error as Error);

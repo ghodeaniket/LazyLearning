@@ -7,7 +7,7 @@ export class LoggingRequestInterceptor implements IRequestInterceptor {
     const enableDebug = await featureFlagService.isEnabled(FeatureFlags.ENABLE_DEBUG_MODE);
 
     if (enableDebug || __DEV__) {
-      console.log(`[API Request] ${config.method || 'GET'} ${config.url || ''}`, {
+      console.log(`[API Request] ${config.method || 'GET'}`, {
         headers: config.headers,
         body: config.body,
       });
@@ -19,7 +19,6 @@ export class LoggingRequestInterceptor implements IRequestInterceptor {
       level: 'info',
       data: {
         method: config.method || 'GET',
-        url: config.url,
       },
     });
 

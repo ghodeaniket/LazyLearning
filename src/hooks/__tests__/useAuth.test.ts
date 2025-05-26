@@ -1,35 +1,59 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useAuth } from '../useAuth';
+import { authService } from '../../services/firebase/auth';
 import { tokenManager } from '../../services/auth/tokenManager';
-import { sessionManager } from '../../services/security/sessionManager';
+import { analyticsService } from '../../services/firebase/analytics';
+import { sentryService } from '../../services/monitoring';
 import { errorHandler } from '../../services/monitoring';
-import { axiosClient } from '../../services/api';
-import { encryptedStorage } from '../../services/storage';
 
 // Mock dependencies
+jest.mock('../../services/firebase/auth');
 jest.mock('../../services/auth/tokenManager');
-jest.mock('../../services/security/sessionManager');
+jest.mock('../../services/firebase/analytics');
 jest.mock('../../services/monitoring');
-jest.mock('../../services/api');
-jest.mock('../../services/storage');
 
 describe('useAuth', () => {
+  const mockUser = {
+    uid: '123',
+    email: 'test@example.com',
+    displayName: 'Test User',
+    photoURL: null,
+    emailVerified: true,
+  };
+
+  const mockFirebaseUser = {
+    uid: '123',
+    email: 'test@example.com',
+    displayName: 'Test User',
+    photoURL: null,
+    emailVerified: true,
+    getIdToken: jest.fn(),
+    getIdTokenResult: jest.fn(),
+    reload: jest.fn(),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
 
     // Setup default mocks
-    (tokenManager.getAccessToken as jest.Mock).mockResolvedValue(null);
-    (tokenManager.setTokens as jest.Mock).mockResolvedValue(undefined);
+    (authService.onAuthStateChanged as jest.Mock).mockImplementation(_callback => {
+      // Don't call callback immediately, let tests control it
+      return jest.fn(); // Return unsubscribe function
+    });
+    (authService.getCurrentUser as jest.Mock).mockReturnValue(null);
+    (authService.signIn as jest.Mock).mockResolvedValue(mockUser);
+    (authService.signUp as jest.Mock).mockResolvedValue(mockUser);
+    (authService.signOut as jest.Mock).mockResolvedValue(undefined);
+    (authService.resetPassword as jest.Mock).mockResolvedValue(undefined);
+
+    (tokenManager.saveTokens as jest.Mock).mockResolvedValue(undefined);
     (tokenManager.clearTokens as jest.Mock).mockResolvedValue(undefined);
-    (tokenManager.refreshToken as jest.Mock).mockResolvedValue(true);
-    (tokenManager.getRefreshToken as jest.Mock).mockResolvedValue('refresh-token');
-    (sessionManager.createSession as jest.Mock).mockResolvedValue(undefined);
-    (sessionManager.clearSession as jest.Mock).mockResolvedValue(undefined);
-    (sessionManager.on as jest.Mock).mockImplementation(() => {});
-    (axiosClient.post as jest.Mock).mockResolvedValue({ data: {} });
-    (encryptedStorage.get as jest.Mock).mockResolvedValue(null);
-    (encryptedStorage.set as jest.Mock).mockResolvedValue(undefined);
-    (encryptedStorage.remove as jest.Mock).mockResolvedValue(undefined);
+
+    (analyticsService.setUserId as jest.Mock).mockResolvedValue(undefined);
+    (analyticsService.logLogin as jest.Mock).mockResolvedValue(undefined);
+    (analyticsService.logSignUp as jest.Mock).mockResolvedValue(undefined);
+
+    (sentryService.setUser as jest.Mock).mockImplementation(() => {});
     (errorHandler.handle as jest.Mock).mockImplementation(() => {});
   });
 
@@ -37,306 +61,276 @@ describe('useAuth', () => {
     it('should start with loading state', () => {
       const { result } = renderHook(() => useAuth());
 
-      expect(result.current.isLoading).toBe(true);
-      expect(result.current.isAuthenticated).toBe(false);
+      expect(result.current.loading).toBe(true);
       expect(result.current.user).toBeNull();
+      expect(result.current.error).toBeNull();
     });
 
-    it('should check authentication on mount', async () => {
+    it('should handle authenticated user on mount', async () => {
+      let authCallback: any;
+      (authService.onAuthStateChanged as jest.Mock).mockImplementation(callback => {
+        authCallback = callback;
+        return jest.fn();
+      });
+
+      mockFirebaseUser.getIdToken.mockResolvedValue('id-token');
+      mockFirebaseUser.getIdTokenResult.mockResolvedValue({
+        expirationTime: new Date(Date.now() + 3600000).toISOString(),
+      });
+      (authService.getCurrentUser as jest.Mock).mockReturnValue(mockFirebaseUser);
+
+      const { result } = renderHook(() => useAuth());
+
+      // Trigger auth state change
+      await act(async () => {
+        authCallback(mockUser);
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+        expect(result.current.user).toEqual(mockUser);
+        expect(tokenManager.saveTokens).toHaveBeenCalledWith({
+          accessToken: 'id-token',
+          refreshToken: 'id-token',
+          expiresAt: expect.any(Number),
+          userId: '123',
+        });
+        expect(analyticsService.setUserId).toHaveBeenCalledWith('123');
+        expect(sentryService.setUser).toHaveBeenCalledWith({
+          id: '123',
+          email: 'test@example.com',
+        });
+      });
+    });
+
+    it('should handle unauthenticated user on mount', async () => {
+      let authCallback: any;
+      (authService.onAuthStateChanged as jest.Mock).mockImplementation(callback => {
+        authCallback = callback;
+        return jest.fn();
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      // Trigger auth state change with null user
+      await act(async () => {
+        authCallback(null);
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+        expect(result.current.user).toBeNull();
+        expect(tokenManager.clearTokens).toHaveBeenCalled();
+        expect(analyticsService.setUserId).toHaveBeenCalledWith(null);
+        expect(sentryService.setUser).toHaveBeenCalledWith(null);
+      });
+    });
+  });
+
+  describe('signIn', () => {
+    it('should sign in successfully', async () => {
       const { result } = renderHook(() => useAuth());
 
       await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await result.current.signIn('test@example.com', 'password123');
       });
 
-      expect(tokenManager.getAccessToken).toHaveBeenCalled();
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    it('should set authenticated state when token exists', async () => {
-      const mockUser = { id: '123', email: 'test@example.com' };
-      (tokenManager.getAccessToken as jest.Mock).mockResolvedValue('valid-token');
-      (encryptedStorage.get as jest.Mock).mockResolvedValue(mockUser);
-
-      const { result } = renderHook(() => useAuth());
-
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      });
-
-      expect(result.current.isAuthenticated).toBe(true);
+      expect(authService.signIn).toHaveBeenCalledWith('test@example.com', 'password123');
+      expect(analyticsService.logLogin).toHaveBeenCalledWith('email');
       expect(result.current.user).toEqual(mockUser);
-      expect(result.current.isLoading).toBe(false);
+      expect(result.current.error).toBeNull();
+    });
+
+    it('should handle sign in error', async () => {
+      const error = new Error('Invalid credentials');
+      (authService.signIn as jest.Mock).mockRejectedValue(error);
+
+      const { result } = renderHook(() => useAuth());
+
+      await expect(
+        act(async () => {
+          await result.current.signIn('test@example.com', 'wrongpassword');
+        })
+      ).rejects.toThrow('Invalid credentials');
+
+      expect(result.current.error).toEqual(error);
+      expect(errorHandler.handle).toHaveBeenCalledWith(error);
     });
   });
 
-  describe('login', () => {
-    it('should successfully login with email and password', async () => {
-      const mockResponse = {
-        data: {
-          accessToken: 'access-token',
-          refreshToken: 'refresh-token',
-          user: { id: '123', email: 'test@example.com' },
-        },
-      };
-
-      (axiosClient.post as jest.Mock).mockResolvedValue(mockResponse);
-
+  describe('signUp', () => {
+    it('should sign up successfully', async () => {
       const { result } = renderHook(() => useAuth());
 
       await act(async () => {
-        await result.current.login('test@example.com', 'password123');
+        await result.current.signUp('test@example.com', 'password123');
       });
 
-      expect(axiosClient.post).toHaveBeenCalledWith('/auth/login', {
-        email: 'test@example.com',
-        password: 'password123',
-      });
-
-      expect(tokenManager.setTokens).toHaveBeenCalledWith({
-        accessToken: 'access-token',
-        refreshToken: 'refresh-token',
-      });
-
-      expect(sessionManager.createSession).toHaveBeenCalledWith({
-        user: mockResponse.data.user,
-      });
-
-      expect(result.current.isAuthenticated).toBe(true);
-      expect(result.current.user).toEqual(mockResponse.data.user);
+      expect(authService.signUp).toHaveBeenCalledWith('test@example.com', 'password123');
+      expect(analyticsService.logSignUp).toHaveBeenCalledWith('email');
+      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.error).toBeNull();
     });
 
-    it('should handle login errors', async () => {
-      const mockError = new Error('Invalid credentials');
-      (axiosClient.post as jest.Mock).mockRejectedValue(mockError);
+    it('should handle sign up error', async () => {
+      const error = new Error('Email already in use');
+      (authService.signUp as jest.Mock).mockRejectedValue(error);
 
       const { result } = renderHook(() => useAuth());
 
-      await act(async () => {
-        await expect(result.current.login('test@example.com', 'wrong-password'))
-          .rejects.toThrow('Invalid credentials');
-      });
+      await expect(
+        act(async () => {
+          await result.current.signUp('test@example.com', 'password123');
+        })
+      ).rejects.toThrow('Email already in use');
 
-      expect(errorHandler.handle).toHaveBeenCalledWith(mockError, true);
-      expect(result.current.isAuthenticated).toBe(false);
-    });
-
-    it('should validate email format', async () => {
-      const { result } = renderHook(() => useAuth());
-
-      await act(async () => {
-        await expect(result.current.login('invalid-email', 'password'))
-          .rejects.toThrow();
-      });
-
-      expect(axiosClient.post).not.toHaveBeenCalled();
-    });
-
-    it('should validate password requirements', async () => {
-      const { result } = renderHook(() => useAuth());
-
-      await act(async () => {
-        await expect(result.current.login('test@example.com', '123'))
-          .rejects.toThrow();
-      });
-
-      expect(axiosClient.post).not.toHaveBeenCalled();
+      expect(result.current.error).toEqual(error);
+      expect(errorHandler.handle).toHaveBeenCalledWith(error);
     });
   });
 
-  describe('register', () => {
-    it('should successfully register new user', async () => {
-      const mockResponse = {
-        data: {
-          accessToken: 'access-token',
-          refreshToken: 'refresh-token',
-          user: { id: '123', email: 'new@example.com', username: 'newuser' },
-        },
-      };
-
-      (axiosClient.post as jest.Mock).mockResolvedValue(mockResponse);
-
+  describe('signOut', () => {
+    it('should sign out successfully', async () => {
       const { result } = renderHook(() => useAuth());
 
+      // Set initial user state
       await act(async () => {
-        await result.current.register('new@example.com', 'password123', 'newuser');
+        result.current.user = mockUser;
       });
-
-      expect(axiosClient.post).toHaveBeenCalledWith('/auth/register', {
-        email: 'new@example.com',
-        password: 'password123',
-        username: 'newuser',
-      });
-
-      expect(tokenManager.setTokens).toHaveBeenCalled();
-      expect(result.current.isAuthenticated).toBe(true);
-      expect(result.current.user).toEqual(mockResponse.data.user);
-    });
-
-    it('should handle registration errors', async () => {
-      const mockError = new Error('Email already exists');
-      (axiosClient.post as jest.Mock).mockRejectedValue(mockError);
-
-      const { result } = renderHook(() => useAuth());
 
       await act(async () => {
-        await expect(result.current.register('existing@example.com', 'password123', 'user'))
-          .rejects.toThrow('Email already exists');
+        await result.current.signOut();
       });
 
-      expect(errorHandler.handle).toHaveBeenCalledWith(mockError, true);
-    });
-
-    it('should validate username format', async () => {
-      const { result } = renderHook(() => useAuth());
-
-      await act(async () => {
-        await expect(result.current.register('test@example.com', 'password123', 'a'))
-          .rejects.toThrow();
-      });
-
-      expect(axiosClient.post).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('logout', () => {
-    it('should successfully logout', async () => {
-      // Setup authenticated state
-      const mockUser = { id: '123', email: 'test@example.com' };
-      (tokenManager.getAccessToken as jest.Mock).mockResolvedValue('valid-token');
-      (encryptedStorage.get as jest.Mock).mockResolvedValue(mockUser);
-
-      const { result } = renderHook(() => useAuth());
-
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      });
-
-      expect(result.current.isAuthenticated).toBe(true);
-
-      // Perform logout
-      await act(async () => {
-        await result.current.logout();
-      });
-
+      expect(authService.signOut).toHaveBeenCalled();
       expect(tokenManager.clearTokens).toHaveBeenCalled();
-      expect(sessionManager.clearSession).toHaveBeenCalled();
-      expect(encryptedStorage.remove).toHaveBeenCalledWith('user');
-      expect(result.current.isAuthenticated).toBe(false);
       expect(result.current.user).toBeNull();
+      expect(result.current.error).toBeNull();
     });
 
-    it('should handle logout errors gracefully', async () => {
-      const mockError = new Error('Logout failed');
-      (tokenManager.clearTokens as jest.Mock).mockRejectedValue(mockError);
+    it('should handle sign out error', async () => {
+      const error = new Error('Sign out failed');
+      (authService.signOut as jest.Mock).mockRejectedValue(error);
 
       const { result } = renderHook(() => useAuth());
 
-      await act(async () => {
-        await result.current.logout();
-      });
+      await expect(
+        act(async () => {
+          await result.current.signOut();
+        })
+      ).rejects.toThrow('Sign out failed');
 
-      expect(errorHandler.handle).toHaveBeenCalledWith(mockError);
-      // Should still clear local state
-      expect(result.current.isAuthenticated).toBe(false);
-      expect(result.current.user).toBeNull();
+      expect(result.current.error).toEqual(error);
+      expect(errorHandler.handle).toHaveBeenCalledWith(error);
     });
   });
 
-  describe('refreshToken', () => {
-    it('should refresh tokens successfully', async () => {
-      const mockResponse = {
-        data: {
-          accessToken: 'new-access-token',
-          refreshToken: 'new-refresh-token',
-        },
-      };
-
-      (tokenManager.getRefreshToken as jest.Mock).mockResolvedValue('old-refresh-token');
-      (axiosClient.post as jest.Mock).mockResolvedValue(mockResponse);
-
+  describe('resetPassword', () => {
+    it('should reset password successfully', async () => {
       const { result } = renderHook(() => useAuth());
 
       await act(async () => {
-        await result.current.refreshToken();
+        await result.current.resetPassword('test@example.com');
       });
 
-      expect(axiosClient.post).toHaveBeenCalledWith('/auth/refresh', {
-        refreshToken: 'old-refresh-token',
-      });
-
-      expect(tokenManager.setTokens).toHaveBeenCalledWith({
-        accessToken: 'new-access-token',
-        refreshToken: 'new-refresh-token',
-      });
+      expect(authService.resetPassword).toHaveBeenCalledWith('test@example.com');
+      expect(result.current.error).toBeNull();
     });
 
-    it('should logout when refresh fails', async () => {
-      (tokenManager.getRefreshToken as jest.Mock).mockResolvedValue('old-refresh-token');
-      (axiosClient.post as jest.Mock).mockRejectedValue(new Error('Invalid refresh token'));
+    it('should handle reset password error', async () => {
+      const error = new Error('User not found');
+      (authService.resetPassword as jest.Mock).mockRejectedValue(error);
 
       const { result } = renderHook(() => useAuth());
 
-      await act(async () => {
-        await result.current.refreshToken();
-      });
+      await expect(
+        act(async () => {
+          await result.current.resetPassword('notfound@example.com');
+        })
+      ).rejects.toThrow('User not found');
 
-      expect(tokenManager.clearTokens).toHaveBeenCalled();
-      expect(result.current.isAuthenticated).toBe(false);
-    });
-
-    it('should handle missing refresh token', async () => {
-      (tokenManager.getRefreshToken as jest.Mock).mockResolvedValue(null);
-
-      const { result } = renderHook(() => useAuth());
-
-      await act(async () => {
-        const refreshed = await result.current.refreshToken();
-        expect(refreshed).toBe(false);
-      });
-
-      expect(axiosClient.post).not.toHaveBeenCalled();
+      expect(result.current.error).toEqual(error);
+      expect(errorHandler.handle).toHaveBeenCalledWith(error);
     });
   });
 
-  describe('updateUser', () => {
-    it('should update user data', async () => {
-      const initialUser = { id: '123', email: 'test@example.com' };
-      const updatedData = { username: 'newusername' };
-
-      (tokenManager.getAccessToken as jest.Mock).mockResolvedValue('valid-token');
-      (encryptedStorage.get as jest.Mock).mockResolvedValue(initialUser);
+  describe('refreshUser', () => {
+    it('should refresh user data successfully', async () => {
+      (authService.getCurrentUser as jest.Mock).mockReturnValue(mockFirebaseUser);
+      mockFirebaseUser.reload.mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useAuth());
 
       await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await result.current.refreshUser();
       });
 
-      await act(async () => {
-        await result.current.updateUser(updatedData);
-      });
-
-      expect(encryptedStorage.set).toHaveBeenCalledWith('user', {
-        ...initialUser,
-        ...updatedData,
-      });
-
-      expect(result.current.user).toEqual({
-        ...initialUser,
-        ...updatedData,
-      });
+      expect(mockFirebaseUser.reload).toHaveBeenCalled();
+      expect(result.current.user).toEqual(mockUser);
     });
 
-    it('should not update when not authenticated', async () => {
+    it('should handle refresh user error', async () => {
+      const error = new Error('Reload failed');
+      (authService.getCurrentUser as jest.Mock).mockReturnValue(mockFirebaseUser);
+      mockFirebaseUser.reload.mockRejectedValue(error);
+
       const { result } = renderHook(() => useAuth());
 
       await act(async () => {
-        await result.current.updateUser({ username: 'newname' });
+        await result.current.refreshUser();
       });
 
-      expect(encryptedStorage.set).not.toHaveBeenCalled();
-      expect(result.current.user).toBeNull();
+      expect(errorHandler.handle).toHaveBeenCalledWith(error);
+    });
+
+    it('should do nothing if no current user', async () => {
+      (authService.getCurrentUser as jest.Mock).mockReturnValue(null);
+
+      const { result } = renderHook(() => useAuth());
+
+      await act(async () => {
+        await result.current.refreshUser();
+      });
+
+      expect(mockFirebaseUser.reload).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('loading states', () => {
+    it('should set loading during sign in', async () => {
+      let resolveSignIn: any;
+      (authService.signIn as jest.Mock).mockImplementation(() =>
+        new Promise(resolve => { resolveSignIn = resolve; })
+      );
+
+      const { result } = renderHook(() => useAuth());
+
+      let signInPromise: Promise<void>;
+      act(() => {
+        signInPromise = result.current.signIn('test@example.com', 'password');
+      });
+
+      expect(result.current.loading).toBe(true);
+
+      await act(async () => {
+        resolveSignIn(mockUser);
+        await signInPromise;
+      });
+
+      expect(result.current.loading).toBe(false);
+    });
+  });
+
+  describe('cleanup', () => {
+    it('should unsubscribe from auth state changes on unmount', () => {
+      const unsubscribe = jest.fn();
+      (authService.onAuthStateChanged as jest.Mock).mockReturnValue(unsubscribe);
+
+      const { unmount } = renderHook(() => useAuth());
+
+      unmount();
+
+      expect(unsubscribe).toHaveBeenCalled();
     });
   });
 });

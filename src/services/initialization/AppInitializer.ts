@@ -3,7 +3,7 @@ import { initializeStorage } from '../storage';
 import { initializeMonitoring } from '../monitoring';
 import { initializeSecurity } from '../security';
 import { featureFlagService, FeatureFlags } from '../featureFlags';
-import { tokenManager } from '../auth/tokenManager';
+// import { tokenManager } from '../auth/tokenManager';
 import { rateLimiter, defaultRateLimitRules } from '../api/rateLimiter';
 import Config from 'react-native-config';
 
@@ -63,17 +63,15 @@ class FeatureFlagInitializer implements IServiceInitializer {
 
 class FirebaseInitializer implements IServiceInitializer {
   async initialize(): Promise<void> {
-    const enableAnalytics = await featureFlagService.isEnabled(
-      FeatureFlags.ENABLE_ANALYTICS
-    );
-    const enableCrashlytics = await featureFlagService.isEnabled(
-      FeatureFlags.ENABLE_CRASHLYTICS
-    );
+    // Feature flags will be used to conditionally enable services in the future
+    // const enableAnalytics = await featureFlagService.isEnabled(
+    //   FeatureFlags.ENABLE_ANALYTICS
+    // );
+    // const enableCrashlytics = await featureFlagService.isEnabled(
+    //   FeatureFlags.ENABLE_CRASHLYTICS
+    // );
 
-    await initializeFirebaseServices({
-      enableAnalytics,
-      enableCrashlytics,
-    });
+    await initializeFirebaseServices();
   }
 
   getName(): string {
@@ -127,8 +125,7 @@ class SecurityInitializer implements IServiceInitializer {
 
 class ApiInitializer implements IServiceInitializer {
   async initialize(): Promise<void> {
-    // Initialize token manager
-    await tokenManager.initialize();
+    // Token manager is a singleton, no initialization needed
 
     // Configure rate limiter
     const enableRateLimiting = await featureFlagService.isEnabled(
