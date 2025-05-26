@@ -34,6 +34,14 @@ export class RateLimiter {
     return RateLimiter.instance;
   }
 
+  // For testing purposes only
+  static resetInstance(): void {
+    if (RateLimiter.instance) {
+      RateLimiter.instance.destroy();
+      RateLimiter.instance = null as any;
+    }
+  }
+
   configure(rules: RateLimitRule[]): void {
     this.rules = rules;
   }
