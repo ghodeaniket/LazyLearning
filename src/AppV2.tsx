@@ -3,7 +3,6 @@ import {
   SafeAreaProvider,
   initialWindowMetrics,
 } from 'react-native-safe-area-context';
-import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Provider } from 'react-redux';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -17,11 +16,13 @@ import {
 import { store } from './store';
 import { queryClient } from './services/queryClient';
 import { AppInitializer } from './services/initialization/AppInitializer';
-import { useFeatureFlag } from './hooks/useFeatureFlag';
-import { FeatureFlags } from './services/featureFlags';
+// These imports are available for future use
+// import { useFeatureFlag } from './hooks/useFeatureFlag';
+// import { FeatureFlags } from './services/featureFlags';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppStateListener } from './components/AppStateListener';
 import { NetworkStatusProvider } from './components/NetworkStatusProvider';
+import { RootNavigator, AuthProvider } from './navigation';
 
 // App state types
 interface AppState {
@@ -79,17 +80,7 @@ ErrorScreen.displayName = 'ErrorScreen';
 
 // Main app content
 const AppContent = memo(() => {
-  const showDeveloperMenu = useFeatureFlag(FeatureFlags.SHOW_DEVELOPER_MENU);
-
-  return (
-    <NavigationContainer>
-      {/* Navigation will be added here */}
-      <View style={styles.tempContent}>
-        <Text>LazyLearner App</Text>
-        {showDeveloperMenu && <Text>Developer Mode Enabled</Text>}
-      </View>
-    </NavigationContainer>
-  );
+  return <RootNavigator />;
 });
 
 AppContent.displayName = 'AppContent';
@@ -136,7 +127,9 @@ const App: React.FC = () => {
             <SafeAreaProvider initialMetrics={initialWindowMetrics}>
               <NetworkStatusProvider>
                 <AppStateListener>
-                  <AppContent />
+                  <AuthProvider>
+                    <AppContent />
+                  </AuthProvider>
                 </AppStateListener>
               </NetworkStatusProvider>
             </SafeAreaProvider>

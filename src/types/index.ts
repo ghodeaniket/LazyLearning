@@ -1,10 +1,18 @@
 // Core type definitions for Lazy Learner app
 
-export interface User {
+// Authentication user type (minimal user info)
+export interface AuthUser {
   id: string;
   email: string;
-  name: string;
+  displayName: string;
+  photoURL?: string;
   createdAt: Date;
+  updatedAt: Date;
+}
+
+// Full user type with preferences and progress
+export interface User extends AuthUser {
+  name: string;
   lastLogin: Date;
   preferences: UserPreferences;
   progress: UserProgress;
