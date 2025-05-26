@@ -3,7 +3,7 @@ import { encryptedStorage } from '../storage';
 import { tokenManager } from '../auth/tokenManager';
 import { errorHandler, ErrorSeverity } from '../monitoring';
 import { sentryService } from '../monitoring/sentry';
-import { deviceFingerprint } from './deviceFingerprint';
+// deviceFingerprint import removed - not needed for MVP
 
 export interface Session {
   id: string;
@@ -71,13 +71,13 @@ export class SessionManager {
       await this.endSession('new_session_started');
     }
 
-    const fingerprint = await deviceFingerprint.getFingerprint();
     const now = Date.now();
+    const deviceId = 'web-' + Math.random().toString(36).substr(2, 9); // Simple device ID for MVP
 
     const session: Session = {
       id: this.generateSessionId(),
       userId,
-      deviceId: fingerprint.id,
+      deviceId,
       startTime: now,
       lastActivity: now,
       expiresAt: now + (this.config.maxSessionDurationHours * 60 * 60 * 1000),
@@ -161,12 +161,7 @@ export class SessionManager {
       return null;
     }
 
-    // Verify device hasn't changed
-    const fingerprint = await deviceFingerprint.getFingerprint();
-    if (stored.deviceId !== fingerprint.id) {
-      await this.handleSessionTimeout();
-      return null;
-    }
+    // Device verification removed - not needed for MVP
 
     this.currentSession = stored;
     this.startInactivityTimer();

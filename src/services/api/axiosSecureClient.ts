@@ -1,8 +1,5 @@
 import { axiosApiClient, ApiRequestConfig } from './axiosClient';
-import { securityHeaders } from '../security/headers';
-import { requestSigning } from '../security/requestSigning';
 import { encryptionService } from '../security/encryption';
-import { deviceFingerprint } from '../security/deviceFingerprint';
 import { validationService } from '../security/validation';
 import { sessionManager } from '../security/sessionManager';
 import { errorHandler } from '../monitoring';
@@ -55,7 +52,6 @@ export class AxiosSecureApiClient {
     config: SecureApiRequestConfig
   ): Promise<ApiRequestConfig> {
     const enableEncryption = await featureFlagService.isEnabled(FeatureFlags.ENABLE_ENCRYPTION);
-    const enableSigning = await featureFlagService.isEnabled(FeatureFlags.ENABLE_REQUEST_SIGNING);
 
     // Start with base configuration
     let finalConfig: ApiRequestConfig = {
@@ -64,9 +60,7 @@ export class AxiosSecureApiClient {
       ...config,
     };
 
-    // Get security headers
-    const baseSecurityHeaders = securityHeaders.getSecurityHeaders();
-    const deviceHeaders = await deviceFingerprint.getFingerprintHeaders();
+    // Security headers removed - not needed for MVP
 
     // Add CSRF token for state-changing requests
     const csrfHeaders: Record<string, string> = {};
@@ -101,23 +95,11 @@ export class AxiosSecureApiClient {
       };
     }
 
-    // Sign request if requested
-    let signatureHeaders = {};
-    if ((config.sign !== false && enableSigning) || config.sign === true) {
-      const signatureData = await requestSigning.signRequest({
-        method: finalConfig.method || 'GET',
-        url: finalConfig.url || '',
-        body: typeof requestData === 'string' ? requestData : JSON.stringify(requestData || ''),
-      });
-      signatureHeaders = requestSigning.getSigningHeaders(signatureData);
-    }
+    // Request signing removed - not needed for MVP
 
-    // Merge all headers
+    // Merge headers
     finalConfig.headers = {
-      ...baseSecurityHeaders,
-      ...deviceHeaders,
       ...csrfHeaders,
-      ...signatureHeaders,
       ...(finalConfig.headers || {}),
     };
 
@@ -156,10 +138,7 @@ export class AxiosSecureApiClient {
       );
     }
 
-    // Validate response headers
-    if (config.validateResponse !== false) {
-      securityHeaders.validateIncomingHeaders(response.headers || {});
-    }
+    // Response validation removed - not needed for MVP
 
     return responseData;
   }
