@@ -64,6 +64,10 @@ yarn-error.log
 
 # testing
 /coverage
+
+# Firebase config files (contain sensitive data)
+ios/LazyLearner/GoogleService-Info.plist
+android/app/google-services.json
 .nyc_output
 
 # Yarn
