@@ -6,19 +6,21 @@ import type { ScenarioElement, RenderScenarioMessage } from '../types/protocol';
 import type { RenderContext } from '../types/renderer';
 
 // Mock components for testing
+import { View, Text, Pressable } from 'react-native';
+
 const MockServer = ({ element }: any) => (
-  <div testID={`server-${element.id}`}>
-    Server: {element.props.capacity}
-  </div>
+  <View testID={`server-${element.id}`}>
+    <Text>Server: {element.props.capacity}</Text>
+  </View>
 );
 
 const MockPizza = ({ element, context }: any) => (
-  <div
+  <Pressable
     testID={`pizza-${element.id}`}
     onPress={() => context.onInteraction('tap', element.id)}
   >
-    Pizza: {element.props.priority}
-  </div>
+    <Text>Pizza: {element.props.priority}</Text>
+  </Pressable>
 );
 
 describe('DynamicRenderer', () => {

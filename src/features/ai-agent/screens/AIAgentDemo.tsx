@@ -71,10 +71,10 @@ export const AIAgentDemo: React.FC = () => {
   const renderContext: RenderContext = {
     onInteraction: useCallback((action: string, targetId: string, payload?: any) => {
       console.log('Interaction:', { action, targetId, payload });
-      
+
       // Send user action to agent
       agentService.sendUserAction(action, targetId, payload);
-      
+
       // Simulate agent feedback
       const feedbackMsg: FeedbackMessage = createMessage({
         type: 'feedback',
@@ -82,7 +82,7 @@ export const AIAgentDemo: React.FC = () => {
         message: `Good job! You ${action} on ${targetId}`,
         severity: 'success',
       });
-      
+
       setFeedback(feedbackMsg.message);
     }, [agentService]),
     theme: 'light',
