@@ -1,12 +1,12 @@
-import { 
-  parseAgentMessage, 
+import {
+  parseAgentMessage,
   validateAgentMessage,
-  createMessage 
+  createMessage,
 } from '../services/protocolService';
-import type { 
-  AgentMessage, 
+import type {
+  AgentMessage,
   RenderScenarioMessage,
-  UserActionMessage 
+  UserActionMessage,
 } from '../types/protocol';
 
 describe('Agent Communication Protocol', () => {
@@ -22,10 +22,10 @@ describe('Agent Communication Protocol', () => {
             id: 'server-1',
             type: 'server',
             props: { capacity: 100 },
-            position: { x: 100, y: 200 }
-          }
+            position: { x: 100, y: 200 },
+          },
         ],
-        layout: { type: 'absolute' }
+        layout: { type: 'absolute' },
       };
 
       const parsed = parseAgentMessage(rawMessage);
@@ -56,7 +56,7 @@ describe('Agent Communication Protocol', () => {
         timestamp: Date.now(),
         concept: 'load_balancing',
         elements: [],
-        layout: { type: 'absolute' }
+        layout: { type: 'absolute' },
       };
 
       expect(validateAgentMessage(validMessage)).toBe(true);
@@ -66,7 +66,7 @@ describe('Agent Communication Protocol', () => {
       const invalidMessage = {
         id: 'msg-123',
         type: 'invalid_type',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       expect(validateAgentMessage(invalidMessage as any)).toBe(false);
@@ -79,7 +79,7 @@ describe('Agent Communication Protocol', () => {
         type: 'user_action',
         action: 'drop_pizza',
         targetId: 'delivery-1',
-        payload: { pizzaId: 'pizza-123' }
+        payload: { pizzaId: 'pizza-123' },
       });
 
       expect(message.id).toBeDefined();
@@ -91,7 +91,7 @@ describe('Agent Communication Protocol', () => {
     it('should generate unique message IDs', () => {
       const msg1 = createMessage({ type: 'user_action', action: 'test', targetId: '1' });
       const msg2 = createMessage({ type: 'user_action', action: 'test', targetId: '1' });
-      
+
       expect(msg1.id).not.toBe(msg2.id);
     });
   });
@@ -99,22 +99,22 @@ describe('Agent Communication Protocol', () => {
   describe('Message Queue Behavior', () => {
     it('should handle message ordering', () => {
       const messages: AgentMessage[] = [];
-      
+
       // Messages should be processed in order
       const msg1 = createMessage<UserActionMessage>({
         type: 'user_action',
         action: 'action1',
-        targetId: 'target1'
+        targetId: 'target1',
       });
-      
+
       const msg2 = createMessage<UserActionMessage>({
         type: 'user_action',
         action: 'action2',
-        targetId: 'target2'
+        targetId: 'target2',
       });
 
       messages.push(msg1, msg2);
-      
+
       expect(messages[0].timestamp).toBeLessThanOrEqual(messages[1].timestamp);
     });
   });

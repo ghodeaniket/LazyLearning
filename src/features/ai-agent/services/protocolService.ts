@@ -1,11 +1,11 @@
-import type { 
-  AgentMessage, 
+import type {
+  AgentMessage,
   AgentMessageType,
   BaseAgentMessage,
   RenderScenarioMessage,
   UserActionMessage,
   StateUpdateMessage,
-  FeedbackMessage
+  FeedbackMessage,
 } from '../types/protocol';
 
 // Simple ID generation - YAGNI: no need for complex UUID
@@ -31,7 +31,7 @@ export function parseAgentMessage(rawMessage: unknown): AgentMessage {
   const baseMessage: BaseAgentMessage = {
     id: message.id as string || generateMessageId(),
     type: message.type as AgentMessageType,
-    timestamp: message.timestamp as number || Date.now()
+    timestamp: message.timestamp as number || Date.now(),
   };
 
   // Validate specific message types
@@ -60,7 +60,7 @@ function parseRenderScenarioMessage(message: any): RenderScenarioMessage {
     timestamp: message.timestamp,
     concept: message.concept,
     elements: message.elements,
-    layout: message.layout
+    layout: message.layout,
   };
 }
 
@@ -75,7 +75,7 @@ function parseUserActionMessage(message: any): UserActionMessage {
     timestamp: message.timestamp,
     action: message.action,
     targetId: message.targetId,
-    payload: message.payload
+    payload: message.payload,
   };
 }
 
@@ -88,7 +88,7 @@ function parseStateUpdateMessage(message: any): StateUpdateMessage {
     id: message.id,
     type: 'state_update',
     timestamp: message.timestamp,
-    updates: message.updates
+    updates: message.updates,
   };
 }
 
@@ -103,7 +103,7 @@ function parseFeedbackMessage(message: any): FeedbackMessage {
     timestamp: message.timestamp,
     isCorrect: message.isCorrect,
     message: message.message,
-    severity: message.severity
+    severity: message.severity,
   };
 }
 
@@ -124,6 +124,6 @@ export function createMessage<T extends AgentMessage>(
   return {
     ...messageData,
     id: generateMessageId(),
-    timestamp: Date.now()
+    timestamp: Date.now(),
   } as T;
 }

@@ -1,7 +1,7 @@
 // Agent Communication Protocol Types
 // Following YAGNI: Only essential message types for MVP
 
-export type AgentMessageType = 
+export type AgentMessageType =
   | 'render_scenario'
   | 'user_action'
   | 'state_update'
@@ -66,8 +66,8 @@ export interface LayoutSpec {
   containerStyle?: Record<string, unknown>;
 }
 
-export type AgentMessage = 
-  | RenderScenarioMessage 
-  | UserActionMessage 
-  | StateUpdateMessage 
+export type AgentMessage =
+  | RenderScenarioMessage
+  | UserActionMessage
+  | StateUpdateMessage
   | FeedbackMessage;
