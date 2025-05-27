@@ -15,6 +15,7 @@ export type MainTabParamList = {
   Learning: undefined;
   Games: undefined;
   Profile: undefined;
+  AIDemo: undefined;
 };
 
 // Root Stack

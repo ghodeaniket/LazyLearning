@@ -5,6 +5,7 @@ import HomeScreen from '../../features/home/screens/HomeScreen';
 import LearningScreen from '../../features/learning/screens/LearningScreen';
 import GamesScreen from '../../features/game/screens/GamesScreen';
 import ProfileScreen from '../../features/profile/screens/ProfileScreen';
+import { AIAgentDemo } from '../../features/ai-agent/screens/AIAgentDemo';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useTheme } from '../../shared/styles/theme';
 
@@ -31,6 +32,9 @@ export const MainNavigator: React.FC = () => {
               break;
             case 'Profile':
               iconName = 'person';
+              break;
+            case 'AIDemo':
+              iconName = 'smart-toy';
               break;
           }
 
@@ -75,6 +79,13 @@ export const MainNavigator: React.FC = () => {
         component={ProfileScreen}
         options={{
           title: 'Profile',
+        }}
+      />
+      <Tab.Screen
+        name="AIDemo"
+        component={AIAgentDemo}
+        options={{
+          title: 'AI Demo',
         }}
       />
     </Tab.Navigator>
